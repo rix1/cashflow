@@ -4,7 +4,7 @@ export enum State {
   VALUE,
   CONVERSION_RATE,
   SOURCE,
-  ID,
+  CARD,
   DONE,
   ERROR,
 }
@@ -16,12 +16,20 @@ export type Token = {
   source: string;
   converstion_rate: string;
   raw: string;
+  card: string;
 };
 
-type TokenKey = keyof Token | "skip";
+type TokenKey = keyof Token;
 
 function trimWhitespace(input: string) {
   return input.split(" ").filter(Boolean).join(" ");
+}
+
+function prepareInput(input: string) {
+  if (input.startsWith('="')) {
+    return input.replace(/="(.+)"/, "$1");
+  }
+  return input;
 }
 
 export function lexer(input: string, debug = false) {
@@ -39,7 +47,7 @@ export function lexer(input: string, debug = false) {
     console.log(`\n===> working on new description`);
   }
   let currentState = State.DATE as State;
-  let workingInput = input;
+  let workingInput = prepareInput(input);
   const token = {
     raw: input,
   } as Token;
@@ -59,14 +67,13 @@ export function lexer(input: string, debug = false) {
     const before = workingInput;
     const currentMatch = regex.exec(workingInput);
     if (currentMatch) {
-      if (field !== "skip") {
-        token[field] = trimWhitespace(currentMatch[0].trim());
-      }
+      token[field] = trimWhitespace(currentMatch[0].trim());
       workingInput = workingInput.replace(currentMatch[0], "");
       log(before, nextState);
       currentState = nextState;
     } else {
       currentState = State.ERROR;
+      log(before, nextState);
     }
   }
 
@@ -84,10 +91,10 @@ export function lexer(input: string, debug = false) {
         );
         break;
       case State.CONVERSION_RATE:
-        handleTransition("converstion_rate", /Kurs\:\s\d{1,}\.\d+/, State.ID);
+        handleTransition("converstion_rate", /Kurs\:\s\d{1,}\.\d+/, State.CARD);
         break;
-      case State.ID:
-        handleTransition("skip", /^\*\d{4}/, State.SOURCE);
+      case State.CARD:
+        handleTransition("card", /^\*\d{4}/, State.SOURCE);
         break;
       case State.SOURCE:
         handleTransition("source", /.+/, State.DONE);

@@ -3,27 +3,27 @@ import { lexer } from "./lexer/lexer.ts";
 
 Deno.test(function testLexer() {
   assertEquals(
-    lexer("*7889 30.10 NOK 182.30 JOKER ILA Kurs: 1.0000").source,
+    lexer('="*7889 30.10 NOK 182.30 JOKER ILA Kurs: 1.0000"').source,
     "JOKER ILA"
   );
   assertEquals(
-    lexer("*7889 31.10 NOK 39.00 RUTERAPPEN Kurs: 1.0000").source,
+    lexer('="*7889 31.10 NOK 39.00 RUTERAPPEN Kurs: 1.0000"').source,
     "RUTERAPPEN"
   );
   assertEquals(
-    lexer("*6483 11.01 EUR 41.40 BOLT.EU/O/2401111200 Kurs: 11.5918").source,
+    lexer('="*6483 11.01 EUR 41.40 BOLT.EU/O/2401111200 Kurs: 11.5918"').source,
     "BOLT.EU/O/2401111200"
   );
   assertEquals(
-    lexer("*7889 10.11 USD 25.00 EGGHEAD.IO TRAINING Kurs: 10.5508").source,
+    lexer('="*7889 10.11 USD 25.00 EGGHEAD.IO TRAINING Kurs: 10.5508"').source,
     "EGGHEAD.IO TRAINING"
   );
   assertEquals(
-    lexer("*7889 31.10 NOK 39.00 RUTERAPPEN Kurs: 1.0000").source,
+    lexer('="*7889 31.10 NOK 39.00 RUTERAPPEN Kurs: 1.0000"').source,
     "RUTERAPPEN"
   );
   assertEquals(
-    lexer("*4288 26.08 DKK 40.40 OK Ejby Kurs: 1.5881").source,
+    lexer('="*4288 26.08 DKK 40.40 OK Ejby Kurs: 1.5881"').source,
     "OK Ejby"
   );
   assertEquals(lexer("PLUS.EXCALIDRAW.COM").source, "PLUS.EXCALIDRAW.COM");
@@ -35,5 +35,32 @@ Deno.test(function testLexer() {
     lexer("Nettgiro til: Skatteetaten-Skatteinnkreving Betalt: 28.08.23")
       .source,
     "Nettgiro til: Skatteetaten-Skatteinnkreving"
+  );
+  assertEquals(
+    lexer("Nettgiro til: Skatteetaten-Skatteinnkreving Betalt: 28.08.23")
+      .source,
+    "Nettgiro til: Skatteetaten-Skatteinnkreving"
+  );
+
+  assertEquals(
+    lexer('="*6483 11.01 NOK 230.00 Vipps*FLYTOGET AS Kurs: 1.0000"').source,
+    "Vipps*FLYTOGET AS"
+  );
+  assertEquals(
+    lexer('="*6483 11.01 EUR 41.40 BOLT.EU/O/2401111200 Kurs: 11.5918"').source,
+    "BOLT.EU/O/2401111200"
+  );
+  assertEquals(
+    lexer('="*6483 11.01 NOK 1104.00 DUTY-FREE 7103 Kurs: 1.0000"').source,
+    "DUTY-FREE 7103"
+  );
+  assertEquals(
+    lexer('="*6483 11.01 NOK 604.00 Wolt Kurs: 1.0000"').source,
+    "Wolt"
+  );
+  assertEquals(lexer('="RUTERAPPEN"').source, "RUTERAPPEN");
+  assertEquals(
+    lexer('="Fellesutgifter lofotagata"').source,
+    "Fellesutgifter lofotagata"
   );
 });
