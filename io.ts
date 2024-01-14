@@ -79,27 +79,23 @@ export function writeDataToCSV(filename: string, data: any) {
     separator: "\t",
   });
 
-  try {
-    Deno.writeTextFileSync(`./out/${filename}`, outputCSV);
-  } catch (error) {
-    if (!(error instanceof Deno.errors.NotADirectory)) {
-      Deno.mkdirSync("./out");
-      Deno.writeTextFileSync(`./out/${filename}`, outputCSV);
+  ensureFileSync(`./out/${filename}`);
+  Deno.writeTextFileSync(`./out/${filename}`, outputCSV);
+
+  const allCombinedPath = `./out/combined.csv`;
+  const isReadableFile = existsSync(allCombinedPath, {
+    isReadable: true,
+    isFile: true,
+  });
+  Deno.writeTextFileSync(
+    allCombinedPath,
+    stringify(data, {
+      columns,
+      separator: "\t",
+      headers: !isReadableFile,
+    }),
+    {
+      append: true,
     }
-  }
-}
-
-type Bank = "nordea" | "dnb" | "handelsbanken";
-
-export async function parseCSVFile(filePath: string) {
-  try {
-    const csv = await Deno.readTextFile(filePath);
-    return parse(csv, {
-      skipFirstRow: true,
-      separator: ";",
-      lazyQuotes: true,
-    });
-  } catch (error) {
-    throw new Error(`${error} - Could not read file ${filePath}`);
-  }
+  );
 }
