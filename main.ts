@@ -21,8 +21,16 @@ type Token = {
 type TokenKey = keyof Token | "skip";
 
 export function lexer(input: string, debug = false) {
-  // the line have the following format:  "*6483 16.12 NOK 688.00 BUSTER HUND OG Kurs: 1.0000",
-  // we want to extract the following tokens: 6483, 16.12 (date), NOK (currency), 688.00 (value), BUSTER HUND OG, 1.0000 (currency rate)
+  /**
+   * Given the transaction description
+   *    "*6483 16.12 NOK 688.00 BUSTER HUND OG Kurs: 1.0000"
+   * We want to extract the following tokens:
+   * - 16.12 (date)
+   * - NOK (currency)
+   * - 688.00 (value)
+   * - BUSTER HUND OG (non-unique source)
+   * - 1.0000 (currency rate)
+   */
   if (debug) {
     console.log(`\n===> working on new description`);
   }
@@ -84,7 +92,6 @@ export function lexer(input: string, debug = false) {
         const paidMatch = /Betalt\:\s\d{2}\.\d{2}\.\d{2}$/.exec(input);
         if (paidMatch) {
           token.date = paidMatch[0].replace("Betalt: ", "");
-
           workingInput = workingInput.replace(paidMatch[0], "");
           token.source = workingInput.trim();
           currentState = State.DONE;
@@ -100,16 +107,6 @@ export function lexer(input: string, debug = false) {
     }
   }
 
-  // // let's start with the currency
-  // const currencyRegex = /(NOK|EUR|USD)\s(\d{1,}\.\d{1,})/g;
-  // const match = currencyRegex.exec(input);
-  // console.log(match);
-
-  // if (match) {
-  //   token.currency = match[1];
-  //   token.value = match[2];
-  // }
-
   return token;
 }
 
@@ -118,7 +115,6 @@ if (import.meta.main) {
     .then((text) => text.split("\n"))
     .then((lines) => lines.filter(Boolean));
 
-  // for testing purposes I only look at the last 3
   testSuite.forEach((line) => {
     console.log(lexer(line, false));
   });
