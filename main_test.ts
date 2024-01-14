@@ -1,5 +1,5 @@
 import { assertEquals } from "https://deno.land/std@0.210.0/assert/mod.ts";
-import { lexer } from "./main.ts";
+import { lexer } from "./lexer/lexer.ts";
 
 Deno.test(function testLexer() {
   assertEquals(

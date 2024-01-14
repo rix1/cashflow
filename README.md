@@ -16,7 +16,12 @@ easier to categorize and summarize expenses for household finance management.
 
 ## How it Works
 
-Cashflow uses a lexer-based approach, inspired by programming languages, to parse the transaction descriptions. The lexer function breaks down the parsing process into distinct stages, each responsible for extracting specific information like date, currency, value, source, and conversion rate. This method avoids the complexity and maintainability issues often associated with regular expressions for complex parsing tasks.
+Cashflow's description parser uses a lexer-based approach, inspired by
+programming language compilers, to parse the transaction descriptions. The lexer function
+breaks down the parsing process into distinct stages, each responsible for
+extracting specific information like date, currency, value, source, and
+conversion rate. This method avoids the complexity and maintainability issues
+often associated with regular expressions for complex parsing tasks.
 
 ## Example
 
@@ -58,8 +63,8 @@ The following assumes you have Deno v1.39 or newer installed.
 
 1. Clone this repo.
 2. Make an export of your bank statement in any format you like.
-3. Copy the "description" (or similar) column and save it as `descriptions-testsuite.txt` in the root of the repo.
-4. Run the main file with `deno task dev` or `deno run --watch --allow-read main.ts`
+3. Copy the "description" (or similar) column and save it as `./lexer/descriptions-testsuite.txt`.
+4. Run the `lexer.debug` file with `deno task lexer` or `deno run --watch --allow-read lexer/lexer.debug.ts`
 5. To run tests, simply run `deno test --watch` to start watching for test changes.
 
 ## Contributing
