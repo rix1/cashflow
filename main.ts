@@ -1,6 +1,6 @@
 import { walk } from "https://deno.land/std@0.212.0/fs/walk.ts";
 import { assert } from "https://deno.land/std@0.212.0/assert/assert.ts";
-import { ask, parseCSVFile, writeDataToCSV } from "./io.ts";
+import { ask, getUserInput, parseCSVFile, writeDataToCSV } from "./io.ts";
 import { transformForBank } from "./transformers/mod.ts";
 import { UserInput } from "./types.ts";
 import { load } from "https://deno.land/std@0.212.0/dotenv/mod.ts";
@@ -27,12 +27,7 @@ if (import.meta.main) {
         `[INFO] Will start working on file "${entry.name}"`
       );
       if (shouldProceed) {
-        const userInput: UserInput = {
-          bank: ask("Please specify bank name", "nordea"),
-          account: ask("What's the account name?", "brukskonto"),
-          owner: ask("And who's the owner?", "rix1"),
-          current_balance: ask("Lastly, what's the current balance?", "123123"),
-        };
+        const userInput = await getUserInput();
         const rawData = await parseCSVFile(`./statements/${entry.name}`);
         const transformedData = transformForBank(rawData, userInput);
         writeDataToCSV(

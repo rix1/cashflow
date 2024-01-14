@@ -2,7 +2,7 @@ export type UserInput = {
   bank: string;
   account: string;
   owner: string;
-  current_balance: string;
+  current_balance: number;
 };
 
 export type PartialTransaction = {
