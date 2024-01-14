@@ -1,6 +1,6 @@
 {
   "tasks": {
-    "dev": "deno run --watch --allow-read main.ts",
+    "dev": "deno run --watch --allow-read --allow-env=DEBUG main.ts",
     "lexer": "deno run --watch --allow-read lexer/lexer.debug.ts"
   }
 }

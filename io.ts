@@ -1,7 +1,7 @@
 import { parse, stringify } from "https://deno.land/std@0.212.0/csv/mod.ts";
 
 export function ask(question: string, fallback?: string): string {
-  if (Deno.env.get("DEBUG") && fallback) {
+  if (Deno.env.get("DEBUG") === "true" && fallback) {
     return fallback;
   }
   return prompt(question) || "";

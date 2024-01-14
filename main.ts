@@ -1,3 +1,5 @@
+import { walk } from "https://deno.land/std@0.212.0/fs/walk.ts";
+import { assert } from "https://deno.land/std@0.212.0/assert/assert.ts";
 import { ask, parseCSVFile, writeDataToCSV } from "./io.ts";
 import { transformForBank } from "./transformers/mod.ts";
 import { UserInput } from "./types.ts";
@@ -15,21 +17,29 @@ Deno.env.set("DEBUG", DEBUG || "false");
 // });
 
 if (import.meta.main) {
-  console.log("Welcome to cashflow!");
-
-  const userInput: UserInput = {
-    bank: ask("Please specify bank name", "nordea"),
-    account: ask("What's the account name?", "brukskonto"),
-    owner: ask("And who's the owner?", "rix1"),
-    current_balance: ask("Lastly, what's the current balance?", "123123"),
-  };
-
-  const rawData = await parseCSVFile("./statements/rix-nordea.csv");
-
-  const transformedData = transformForBank(rawData, userInput);
-
-  writeDataToCSV(
-    `${userInput.owner}-${userInput.bank}-${userInput.account}.csv`,
-    transformedData
+  alert(
+    `Welcome to cashflow! 💰 🏄‍♂️\nI'll read any CSV files in the ./statements/ directory, transform them and output them to ./out/.\n\nReady?`
   );
+
+  for await (const entry of walk("./statements/")) {
+    if (entry.isFile && entry.name.endsWith(".csv")) {
+      const shouldProceed = confirm(
+        `[INFO] Will start working on file "${entry.name}"`
+      );
+      if (shouldProceed) {
+        const userInput: UserInput = {
+          bank: ask("Please specify bank name", "nordea"),
+          account: ask("What's the account name?", "brukskonto"),
+          owner: ask("And who's the owner?", "rix1"),
+          current_balance: ask("Lastly, what's the current balance?", "123123"),
+        };
+        const rawData = await parseCSVFile(`./statements/${entry.name}`);
+        const transformedData = transformForBank(rawData, userInput);
+        writeDataToCSV(
+          `${userInput.owner}-${userInput.bank}-${userInput.account}.csv`,
+          transformedData
+        );
+      }
+    }
+  }
 }
