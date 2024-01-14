@@ -10,7 +10,7 @@ export enum State {
 }
 
 export type Token = {
-  currency: string;
+  currency: string | undefined;
   value: string;
   date: string;
   source: string;
@@ -19,6 +19,10 @@ export type Token = {
 };
 
 type TokenKey = keyof Token | "skip";
+
+function trimWhitespace(input: string) {
+  return input.split(" ").filter(Boolean).join(" ");
+}
 
 export function lexer(input: string, debug = false) {
   /**
@@ -56,7 +60,7 @@ export function lexer(input: string, debug = false) {
     const currentMatch = regex.exec(workingInput);
     if (currentMatch) {
       if (field !== "skip") {
-        token[field] = currentMatch[0].trim();
+        token[field] = trimWhitespace(currentMatch[0].trim());
       }
       workingInput = workingInput.replace(currentMatch[0], "");
       log(before, nextState);
@@ -93,10 +97,10 @@ export function lexer(input: string, debug = false) {
         if (paidMatch) {
           token.date = paidMatch[0].replace("Betalt: ", "");
           workingInput = workingInput.replace(paidMatch[0], "");
-          token.source = workingInput.trim();
+          token.source = trimWhitespace(workingInput.trim());
           currentState = State.DONE;
         } else {
-          token.source = workingInput.trim();
+          token.source = trimWhitespace(workingInput.trim());
           currentState = State.DONE;
         }
         break;
