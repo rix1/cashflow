@@ -32,7 +32,7 @@ function prepareInput(input: string) {
   return input;
 }
 
-export function lexer(input: string, debug = false) {
+export function lexer(_input: string, debug = false) {
   /**
    * Given the transaction description
    *    "*6483 16.12 NOK 688.00 BUSTER HUND OG Kurs: 1.0000"
@@ -47,9 +47,9 @@ export function lexer(input: string, debug = false) {
     console.log(`\n===> working on new description`);
   }
   let currentState = State.DATE as State;
-  let workingInput = prepareInput(input);
+  let workingInput = prepareInput(_input);
   const token = {
-    raw: input,
+    raw: _input,
   } as Token;
 
   const log = (msg?: string, nextState?: State) => {
@@ -86,7 +86,7 @@ export function lexer(input: string, debug = false) {
       case State.VALUE:
         handleTransition(
           "value",
-          /((NOK|EUR|USD|DKK)\s\d+\.\d+\s)/,
+          /((NOK|EUR|USD|DKK|HUF)\s\d+\.\d+\s)/,
           State.CONVERSION_RATE
         );
         break;
@@ -100,7 +100,7 @@ export function lexer(input: string, debug = false) {
         handleTransition("source", /.+/, State.DONE);
         break;
       case State.ERROR: {
-        const paidMatch = /Betalt\:\s\d{2}\.\d{2}\.\d{2}$/.exec(input);
+        const paidMatch = /Betalt.+$/.exec(workingInput);
         if (paidMatch) {
           token.date = paidMatch[0].replace("Betalt: ", "");
           workingInput = workingInput.replace(paidMatch[0], "");

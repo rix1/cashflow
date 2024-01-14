@@ -36,6 +36,15 @@ const testCases = [
   ['="*6483 11.01 NOK 604.00 Wolt Kurs: 1.0000"', "Wolt"],
   ['="RUTERAPPEN"', "RUTERAPPEN"],
   ['="Fellesutgifter lofotagata"', "Fellesutgifter lofotagata"],
+  [
+    '=" Nettgiro til: 2320.84.07473 Betalt: 20.12.22"',
+    "Nettgiro til: 2320.84.07473",
+  ],
+  [
+    '=" Nettgiro fra: Siri Holtnæs Betalt: 22.12.22"',
+    "Nettgiro fra: Siri Holtnæs",
+  ],
+  ['="*7889 23.06 HUF 19895.00 Satchmo Kurs: 0.0326"', "Satchmo"],
 ];
 
 for (const [input, expected] of testCases) {
