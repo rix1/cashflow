@@ -45,6 +45,7 @@ export async function parseCSVFile(filePath: string) {
     return parse(csv, {
       skipFirstRow: true,
       separator: ";",
+      lazyQuotes: true,
     });
   } catch (error) {
     throw new Error(`${error} - Could not read file ${filePath}`);

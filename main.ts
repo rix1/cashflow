@@ -24,7 +24,7 @@ if (import.meta.main) {
     current_balance: ask("Lastly, what's the current balance?", "123123"),
   };
 
-  const rawData = await parseCSVFile("./statements/nordea.csv");
+  const rawData = await parseCSVFile("./statements/rix-nordea.csv");
 
   const transformedData = transformForBank(rawData, userInput);
 
