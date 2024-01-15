@@ -86,7 +86,7 @@ export function lexer(_input: string, debug = false) {
       case State.VALUE:
         handleTransition(
           "value",
-          /((NOK|EUR|USD|DKK|HUF)\s\d+\.\d+\s)/,
+          /((NOK|EUR|USD|DKK|HUF|GBP|SEK)\s\d+\.\d+\s)/,
           State.CONVERSION_RATE
         );
         break;

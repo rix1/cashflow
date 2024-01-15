@@ -37,4 +37,5 @@ if (import.meta.main) {
       }
     }
   }
+  alert(`✅ All done! See output in ./out/`);
 }

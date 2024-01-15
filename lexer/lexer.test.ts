@@ -45,11 +45,19 @@ const testCases = [
     "Nettgiro fra: Siri Holtnæs",
   ],
   ['="*7889 23.06 HUF 19895.00 Satchmo Kurs: 0.0326"', "Satchmo"],
+  [
+    '="*7889 04.09 SEK 23.00 CIRCLE K UDDEVALLA Kurs: 1.0026"',
+    "CIRCLE K UDDEVALLA",
+  ],
+  [
+    '="*7889 14.07 GBP 9.99 GOOGLE YouTube Videos Kurs: 13.4675"',
+    "GOOGLE YouTube Videos",
+  ],
 ];
 
 for (const [input, expected] of testCases) {
   Deno.test(" Lexer format source correctly", () => {
-    const result = lexer(input);
+    const result = lexer(input, true);
     assertEquals(result.source, expected);
   });
 }
