@@ -7,6 +7,8 @@ import {
   Number,
 } from "https://deno.land/x/cliffy@v1.0.0-rc.3/prompt/mod.ts";
 import { parse, stringify } from "https://deno.land/std@0.212.0/csv/mod.ts";
+import { UserInput } from "./types.ts";
+import { ensureDirSync } from "https://deno.land/std@0.212.0/fs/ensure_dir.ts";
 
 export function ask(question: string, fallback?: string): string {
   if (Deno.env.get("DEBUG") === "true" && fallback) {
@@ -15,7 +17,26 @@ export function ask(question: string, fallback?: string): string {
   return prompt(question) || "";
 }
 
-export async function getUserInput() {
+export function guessUserInputFromFile(filename: string): UserInput | void {
+  const filenameparts = filename.replace(".csv", "").split("-");
+  if (filenameparts.length !== 3) {
+    return undefined;
+  } else {
+    return {
+      bank: filenameparts[1],
+      account: filenameparts[2],
+      owner: filenameparts[0],
+      current_balance: 0,
+    };
+  }
+}
+
+export async function getUserInput(): Promise<UserInput> {
+  console.info(
+    "%c%s",
+    "color: ##aBaBaB",
+    "We need some information about this file. Tip: You can avoid inputing this manually by naming your statement files like this: <owner>-<bank>-<account>.csv"
+  );
   const bank: string = await Input.prompt({
     message: "Which bank is this export from?",
     list: true,
@@ -73,14 +94,22 @@ const columns = [
   "conversion_rate",
 ];
 
-export function writeDataToCSV(filename: string, data: any) {
-  const outputCSV = stringify(data, {
-    columns,
-    separator: "\t",
-  });
+export function writeDataToCSV(
+  filename: string,
+  data: any,
+  individual = false
+) {
+  if (individual) {
+    const outputCSV = stringify(data, {
+      columns,
+      separator: "\t",
+    });
 
-  ensureFileSync(`./out/${filename}`);
-  Deno.writeTextFileSync(`./out/${filename}`, outputCSV);
+    ensureFileSync(`./out/${filename}`);
+    Deno.writeTextFileSync(`./out/${filename}`, outputCSV);
+  }
+
+  ensureDirSync("./out");
 
   const allCombinedPath = `./out/combined.csv`;
   const isReadableFile = existsSync(allCombinedPath, {
