@@ -1,7 +1,7 @@
 import { assertEquals } from "https://deno.land/std@0.210.0/assert/mod.ts";
 import { lexer } from "./lexer.ts";
 
-const testCases = [
+const sourceTests = [
   ['="*7889 30.10 NOK 182.30 JOKER ILA Kurs: 1.0000"', "JOKER ILA"],
   ['="*7889 31.10 NOK 39.00 RUTERAPPEN Kurs: 1.0000"', "RUTERAPPEN"],
   [
@@ -17,14 +17,6 @@ const testCases = [
   ["PLUS.EXCALIDRAW.COM", "PLUS.EXCALIDRAW.COM"],
   ["AniCura Grunerløkka Betalt: 29.08.23", "AniCura Grunerløkka"],
   [
-    "Nettgiro til: Skatteetaten-Skatteinnkreving Betalt: 28.08.23",
-    "Nettgiro til: Skatteetaten-Skatteinnkreving",
-  ],
-  [
-    "Nettgiro til: Skatteetaten-Skatteinnkreving Betalt: 28.08.23",
-    "Nettgiro til: Skatteetaten-Skatteinnkreving",
-  ],
-  [
     '="*6483 11.01 NOK 230.00 Vipps*FLYTOGET AS Kurs: 1.0000"',
     "Vipps*FLYTOGET AS",
   ],
@@ -36,14 +28,6 @@ const testCases = [
   ['="*6483 11.01 NOK 604.00 Wolt Kurs: 1.0000"', "Wolt"],
   ['="RUTERAPPEN"', "RUTERAPPEN"],
   ['="Fellesutgifter lofotagata"', "Fellesutgifter lofotagata"],
-  [
-    '=" Nettgiro til: 2320.84.07473 Betalt: 20.12.22"',
-    "Nettgiro til: 2320.84.07473",
-  ],
-  [
-    '=" Nettgiro fra: Siri Holtnæs Betalt: 22.12.22"',
-    "Nettgiro fra: Siri Holtnæs",
-  ],
   ['="*7889 23.06 HUF 19895.00 Satchmo Kurs: 0.0326"', "Satchmo"],
   [
     '="*7889 04.09 SEK 23.00 CIRCLE K UDDEVALLA Kurs: 1.0026"',
@@ -55,9 +39,44 @@ const testCases = [
   ],
 ];
 
-for (const [input, expected] of testCases) {
-  Deno.test(" Lexer format source correctly", () => {
-    const result = lexer(input, true);
-    assertEquals(result.source, expected);
-  });
-}
+Deno.test("Lexer:Source", async (t) => {
+  for (let index = 0; index < sourceTests.length; index++) {
+    const [input, expected] = sourceTests[index];
+    await t.step(`formats ${input}`, () => {
+      const result = lexer(input, true);
+      assertEquals(result.source, expected);
+    });
+  }
+});
+
+const paid_to_tests = [
+  [
+    "Nettgiro til: Skatteetaten-Skatteinnkreving Betalt: 28.08.23",
+    "Skatteetaten-Skatteinnkreving",
+  ],
+  ['=" Nettgiro til: 2320.84.07473 Betalt: 20.12.22"', "23208407473"],
+];
+
+Deno.test("Lexer:To", async (t) => {
+  for (let index = 0; index < paid_to_tests.length; index++) {
+    const [input, expected] = paid_to_tests[index];
+    await t.step(`formats ${input}`, () => {
+      const result = lexer(input, true);
+      assertEquals(result.paid_to, expected);
+    });
+  }
+});
+
+const paid_from_tests = [
+  ['=" Nettgiro fra: Siri Holtnæs Betalt: 22.12.22"', "Siri Holtnæs"],
+];
+
+Deno.test("Lexer:From", async (t) => {
+  for (let index = 0; index < paid_from_tests.length; index++) {
+    const [input, expected] = paid_from_tests[index];
+    await t.step(`formats ${input}`, () => {
+      const result = lexer(input, true);
+      assertEquals(result.from, expected);
+    });
+  }
+});
