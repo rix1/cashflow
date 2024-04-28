@@ -1,4 +1,5 @@
 import { UserInput } from "../types.ts";
+import { dnbTransformer } from "./dnb.ts";
 import { handelsbankenTransformer } from "./handesbanken.ts";
 import { nordeaTransformer } from "./nordea.ts";
 
@@ -15,6 +16,7 @@ export function transformForBank(
         ...userInput,
       }));
     case "dnb":
+      return dnbTransformer(data).map((el) => ({ ...el, ...userInput }));
     default:
       throw new Error(`Bank ${userInput.bank} is not supported`);
   }

@@ -1,5 +1,6 @@
 import { formatAmounts } from "../formatting/formatAmounts.ts";
 import { formatDate } from "../formatting/formatDate.ts";
+import { formatDescription } from "../formatting/formatDescription.ts";
 import { lexer } from "../lexer/lexer.ts";
 import { PartialTransaction } from "../types.ts";
 
@@ -19,7 +20,7 @@ export function nordeaTransformer(
     const amounts = formatAmounts(element["Beløp"]);
     return {
       date: formatDate(element["Bokføringsdato"]),
-      description: parsedDescription.source,
+      description: formatDescription(parsedDescription),
       incoming: amounts.incoming,
       outgoing: amounts.outgoing,
       original_amount: amounts.original_amount,

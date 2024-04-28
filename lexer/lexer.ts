@@ -9,8 +9,10 @@ export enum State {
   CARD,
   PAID_DATE,
   PAID_TO,
+  TRANSFER,
   FROM,
   DONE,
+  TERM_AMOUNT,
   ERROR,
 }
 
@@ -36,9 +38,9 @@ function trimWhitespace(input: string) {
 
 function prepareInput(input: string) {
   if (input.startsWith('="')) {
-    return input.replace(/="(.+)"/, "$1");
+    return trimWhitespace(input.replace(/="(.+)"/, "$1"));
   }
-  return input;
+  return trimWhitespace(input);
 }
 
 export function lexer(_input: string, debug = false) {
@@ -55,7 +57,9 @@ export function lexer(_input: string, debug = false) {
 
   let currentState = State.MONTH_DAY as State;
   let workingInput = prepareInput(_input);
-  console.log(`\n===> working on new description: "${workingInput}"`);
+  if (debug) {
+    console.log(`\n===> working on new description: "${workingInput}"`);
+  }
   const token = {
     raw: _input,
     currency: "",
@@ -91,36 +95,43 @@ export function lexer(_input: string, debug = false) {
     }
   };
 
-  function handleTransition(regex: RegExp) {
+  function handleTransition(regex: RegExp, nextState: State) {
     const currentMatch = regex.exec(workingInput.trim());
+    const originalInput = workingInput;
     if (!currentMatch) {
+      transitionLog(originalInput, "NO_MATCH", originalInput, nextState);
       return undefined;
     }
 
-    const originalInput = workingInput;
     const extracted = trimWhitespace(currentMatch[0]);
     const remainingInput = workingInput.replace(currentMatch[0], "");
 
     workingInput = remainingInput;
-    transitionLog(originalInput, extracted, remainingInput, currentState + 1);
+    transitionLog(originalInput, extracted, remainingInput, nextState);
     return extracted;
   }
 
   while (currentState !== State.DONE) {
     switch (currentState) {
       case State.MONTH_DAY: {
-        const match = handleTransition(/\s\d{1,2}\.\d{1,2}\s/);
+        const match = handleTransition(/\s\d{1,2}\.\d{1,2}\s/, State.VALUE);
         if (match) {
           const [day, month] = match.split(".");
           token.initiated_day = day;
           token.initiated_month = month;
+        } else {
+          const m2 = handleTransition(/\s([a-z]{3})\.\s202\d/, State.VALUE);
+          if (m2) {
+            token.initiated_month = m2.split(".")[0];
+          }
         }
         currentState = State.VALUE;
         break;
       }
       case State.VALUE: {
         const match = handleTransition(
-          /((NOK|EUR|USD|DKK|HUF|GBP|SEK)\s\d+\.\d+\s)/
+          /((NOK|EUR|USD|DKK|HUF|GBP|SEK)\s\d+\.\d+\s)/,
+          State.CONVERSION_RATE
         );
 
         if (match) {
@@ -132,7 +143,7 @@ export function lexer(_input: string, debug = false) {
         break;
       }
       case State.CONVERSION_RATE: {
-        const match = handleTransition(/Kurs\:\s\d{1,}\.\d+/);
+        const match = handleTransition(/Kurs\:\s\d{1,}\.\d+/, State.CARD);
         if (match) {
           token.converstion_rate = match.replace("Kurs: ", "");
         }
@@ -140,7 +151,7 @@ export function lexer(_input: string, debug = false) {
         break;
       }
       case State.CARD: {
-        const match = handleTransition(/^\*\d{4}/);
+        const match = handleTransition(/^\*\d{4}/, State.PAID_DATE);
         if (match) {
           token.card = match;
         }
@@ -148,7 +159,7 @@ export function lexer(_input: string, debug = false) {
         break;
       }
       case State.PAID_DATE: {
-        const match = handleTransition(/Betalt\:.+$/);
+        const match = handleTransition(/Betalt\:.+$/, State.PAID_TO);
         if (match) {
           token.paid_date = formatDate(match.replace("Betalt: ", ""));
         }
@@ -156,26 +167,39 @@ export function lexer(_input: string, debug = false) {
         break;
       }
       case State.PAID_TO: {
-        const match = handleTransition(/^(Nettgiro\s)?til\:(.+)/i);
+        const match = handleTransition(/^(Nettgiro\s)?til\:(.+)/i, State.FROM);
         if (match) {
           token.paid_to = match
-            .replace(/^(Nettgiro\s)?til\:\s/i, "")
-            .replaceAll(".", "");
+            .replace(/^(Nettgiro\s)/i, "")
+            .replaceAll(".", "")
+            .trim();
         }
         currentState = State.FROM;
         break;
       }
       case State.FROM: {
-        const match = handleTransition(/^(Nettgiro\s)?fra\:(.+)/);
+        const match = handleTransition(
+          /^(Nettgiro\s)?fra\:(.+)/i,
+          State.TRANSFER
+        );
         if (match) {
-          token.from = match.replace("Nettgiro fra: ", "");
+          token.from = match
+            .replace(/^(Nettgiro\s)/i, "")
+            .replaceAll(".", "")
+            .trim();
         }
+        currentState = State.TRANSFER;
+        break;
+      }
+      case State.TRANSFER: {
+        handleTransition(/^Overføring(\sinnland)?\s+\d+\s/i, State.CATCH_ALL);
         currentState = State.CATCH_ALL;
         break;
       }
+
       case State.CATCH_ALL: {
         // Set the soruce to whatever is left
-        const match = handleTransition(/.+/);
+        const match = handleTransition(/.+/, State.DONE);
         if (match) {
           token.source = match;
         }

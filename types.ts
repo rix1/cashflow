@@ -6,14 +6,14 @@ export type UserInput = {
 };
 
 export type PartialTransaction = {
-  date: string;
-  original_amount: number;
-  incoming: number | undefined;
-  outgoing: number | undefined;
-  description: string;
-  currency: "NOK";
-  original_currency: undefined | string;
   converstion_rate: string;
+  currency: "NOK";
+  date: string;
+  description: string;
+  incoming: number | undefined;
+  original_amount: number;
+  original_currency: undefined | string;
+  outgoing: number | undefined;
 };
 
 type CompleteTransaction = PartialTransaction &

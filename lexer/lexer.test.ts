@@ -43,7 +43,7 @@ Deno.test("Lexer:Source", async (t) => {
   for (let index = 0; index < sourceTests.length; index++) {
     const [input, expected] = sourceTests[index];
     await t.step(`formats ${input}`, () => {
-      const result = lexer(input, true);
+      const result = lexer(input);
       assertEquals(result.source, expected);
     });
   }
@@ -61,7 +61,7 @@ Deno.test("Lexer:To", async (t) => {
   for (let index = 0; index < paid_to_tests.length; index++) {
     const [input, expected] = paid_to_tests[index];
     await t.step(`formats ${input}`, () => {
-      const result = lexer(input, true);
+      const result = lexer(input);
       assertEquals(result.paid_to, expected);
     });
   }
@@ -75,7 +75,7 @@ Deno.test("Lexer:From", async (t) => {
   for (let index = 0; index < paid_from_tests.length; index++) {
     const [input, expected] = paid_from_tests[index];
     await t.step(`formats ${input}`, () => {
-      const result = lexer(input, true);
+      const result = lexer(input);
       assertEquals(result.from, expected);
     });
   }
