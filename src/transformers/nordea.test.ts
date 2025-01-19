@@ -71,7 +71,7 @@ Deno.test("Nordea transformer test suite", async (t) => {
 
     const expected = {
       date: "2025-01-16",
-      description: "VOI NO",
+      description: "VOI",
       incoming: 0,
       outgoing: -22.0,
       original_amount: -22.0,
@@ -142,7 +142,7 @@ Deno.test("Nordea transformer test suite", async (t) => {
       },
       {
         date: "2025-01-16",
-        description: "VOI NO",
+        description: "VOI",
         incoming: 0,
         outgoing: -22.0,
         original_amount: -22.0,
@@ -175,7 +175,7 @@ Deno.test("Nordea transformer - integration test with real data", async (t) => {
     const expected = [
       {
         date: "2024-12-23",
-        description: "HYRE AS",
+        description: "HYRE",
         incoming: 0,
         outgoing: -1003.4,
         original_amount: -1003.4,
@@ -185,7 +185,7 @@ Deno.test("Nordea transformer - integration test with real data", async (t) => {
       },
       {
         date: "2024-11-07",
-        description: "HYRE AS",
+        description: "HYRE",
         incoming: 0,
         outgoing: -980.5,
         original_amount: -980.5,
@@ -195,7 +195,7 @@ Deno.test("Nordea transformer - integration test with real data", async (t) => {
       },
       {
         date: "2024-09-26",
-        description: "HYRE AS",
+        description: "HYRE",
         incoming: 0,
         outgoing: -526.2,
         original_amount: -526.2,
@@ -205,7 +205,7 @@ Deno.test("Nordea transformer - integration test with real data", async (t) => {
       },
       {
         date: "2024-08-12",
-        description: "HYRE AS",
+        description: "HYRE",
         incoming: 0,
         outgoing: -587.15,
         original_amount: -587.15,
@@ -215,7 +215,7 @@ Deno.test("Nordea transformer - integration test with real data", async (t) => {
       },
       {
         date: "2024-08-12",
-        description: "HYRE AS",
+        description: "HYRE",
         incoming: 0,
         outgoing: -999.0,
         original_amount: -999.0,

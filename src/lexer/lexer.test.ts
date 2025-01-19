@@ -5,10 +5,7 @@ const sourceTests = [
   ["JOKER ILA", "JOKER ILA"],
   ['="*7889 30.10 NOK 182.30 JOKER ILA Kurs: 1.0000"', "JOKER ILA"],
   ['="*7889 31.10 NOK 39.00 RUTERAPPEN Kurs: 1.0000"', "RUTERAPPEN"],
-  [
-    '="*6483 11.01 EUR 41.40 BOLT.EU/O/2401111200 Kurs: 11.5918"',
-    "BOLT.EU/O/2401111200",
-  ],
+  ['="*6483 11.01 EUR 41.40 BOLT.EU/O/2401111200 Kurs: 11.5918"', "BOLT"],
   [
     '="*7889 10.11 USD 25.00 EGGHEAD.IO TRAINING Kurs: 10.5508"',
     "EGGHEAD.IO TRAINING",
@@ -21,10 +18,7 @@ const sourceTests = [
     '="*6483 11.01 NOK 230.00 Vipps*FLYTOGET AS Kurs: 1.0000"',
     "Vipps*FLYTOGET AS",
   ],
-  [
-    '="*6483 11.01 EUR 41.40 BOLT.EU/O/2401111200 Kurs: 11.5918"',
-    "BOLT.EU/O/2401111200",
-  ],
+  ['="*6483 11.01 EUR 41.40 BOLT.EU/O/2401111200 Kurs: 11.5918"', "BOLT"],
   ['="*6483 11.01 NOK 1104.00 DUTY-FREE 7103 Kurs: 1.0000"', "DUTY-FREE 7103"],
   ['="*6483 11.01 NOK 604.00 Wolt Kurs: 1.0000"', "Wolt"],
   ['="RUTERAPPEN"', "RUTERAPPEN"],
@@ -78,6 +72,35 @@ Deno.test("Lexer:From", async (t) => {
     await t.step(`formats ${input}`, () => {
       const result = lexer(input, true);
       assertEquals(result.from, expected);
+    });
+  }
+});
+
+const merchantNormalizationTests = [
+  // Streaming services
+  ["spotify p32f444f94", "SPOTIFY"],
+  ["spotifyse", "SPOTIFY"],
+  ["SPOTIFY P2FC7C6E11", "SPOTIFY"],
+  ["SpotifySE", "SPOTIFY"],
+  ["NETFLIX.COM", "NETFLIX"],
+
+  // Transport/Car sharing
+  ["HYRE AS* BID:1738942", "HYRE"],
+  ["HYRE AS* BID:1675766", "HYRE"],
+  ["HYRE AS*", "HYRE"],
+  ["VOI NO", "VOI"],
+  ["VOI TECHNOLOGY", "VOI"],
+  ["BOLT.EU/O/2401111200", "BOLT"],
+
+  // Combined cases (with BID numbers etc)
+  ["HYRE AS* BID:1452883 OSLO", "HYRE OSLO"],
+];
+
+Deno.test("Lexer: Merchant name normalization", async (t) => {
+  for (const [input, expected] of merchantNormalizationTests) {
+    await t.step(`normalizes "${input}"`, () => {
+      const result = lexer(input, true);
+      assertEquals(result.source, expected);
     });
   }
 });

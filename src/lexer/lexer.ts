@@ -30,6 +30,28 @@ export type Token = {
 
 type TokenKey = keyof Token;
 
+const MERCHANT_SUBSTITUTIONS: [RegExp, string][] = [
+  // Streaming services
+  [/spotify(se)?(\s+p[0-9a-f]+)?/i, "SPOTIFY"],
+  [/netflix[.\s]*com/i, "NETFLIX"],
+
+  // Transport/Car sharing
+  [/hyre\s*as\*(\s+bid:\d+)?/i, "HYRE"],
+  [/voi\s*(no|technology|de)/i, "VOI"],
+  [/bolt\.eu\/o\/\d+/i, "BOLT"],
+];
+
+function normalizeDescription(input: string): string {
+  let result = input;
+
+  // Apply each substitution pattern
+  for (const [pattern, replacement] of MERCHANT_SUBSTITUTIONS) {
+    result = result.replace(pattern, replacement);
+  }
+
+  return result.trim();
+}
+
 function stripUniqueIdentifiers(input: string): string {
   // Matches patterns like BID:1234567, REF:12345, etc.
   return input.replace(/[A-Z]+:\d{4,}/g, "").trim();
@@ -189,11 +211,9 @@ export function lexer(_input: string, debug = false) {
         break;
       }
       case State.CATCH_ALL: {
-        // Set the source to whatever is left
         const match = handleTransition(/.+/);
         if (match) {
-          // Matches patterns like BID:1234567, REF:12345, etc.
-          token.source = stripUniqueIdentifiers(match).toLowerCase();
+          token.source = normalizeDescription(match);
         }
         next(State.DONE);
         break;
