@@ -30,6 +30,11 @@ export type Token = {
 
 type TokenKey = keyof Token;
 
+function stripUniqueIdentifiers(input: string): string {
+  // Matches patterns like BID:1234567, REF:12345, etc.
+  return input.replace(/[A-Z]+:\d{4,}/g, "").trim();
+}
+
 function trimWhitespace(input: string) {
   return input.trim().split(" ").filter(Boolean).join(" ");
 }
@@ -108,6 +113,14 @@ export function lexer(_input: string, debug = false) {
     return extracted;
   }
 
+  function next(nextState: State) {
+    if (debug) {
+      console.log(`[NEXT]: ${State[nextState]}`);
+    }
+
+    currentState = nextState;
+  }
+
   while (currentState !== State.DONE) {
     switch (currentState) {
       case State.MONTH_DAY: {
@@ -117,7 +130,7 @@ export function lexer(_input: string, debug = false) {
           token.initiated_day = day;
           token.initiated_month = month;
         }
-        currentState = State.VALUE;
+        next(State.VALUE);
         break;
       }
       case State.VALUE: {
@@ -130,7 +143,7 @@ export function lexer(_input: string, debug = false) {
           token.currency = currency;
           token.local_value = value;
         }
-        currentState = State.CONVERSION_RATE;
+        next(State.CONVERSION_RATE);
         break;
       }
       case State.CONVERSION_RATE: {
@@ -138,7 +151,7 @@ export function lexer(_input: string, debug = false) {
         if (match) {
           token.conversion_rate = match.replace("Kurs: ", "");
         }
-        currentState = State.CARD;
+        next(State.CARD);
         break;
       }
       case State.CARD: {
@@ -146,7 +159,7 @@ export function lexer(_input: string, debug = false) {
         if (match) {
           token.card = match;
         }
-        currentState = State.PAID_DATE;
+        next(State.PAID_DATE);
         break;
       }
       case State.PAID_DATE: {
@@ -154,7 +167,7 @@ export function lexer(_input: string, debug = false) {
         if (match) {
           token.paid_date = formatDate(match.replace("Betalt: ", ""));
         }
-        currentState = State.PAID_TO;
+        next(State.PAID_TO);
         break;
       }
       case State.PAID_TO: {
@@ -164,7 +177,7 @@ export function lexer(_input: string, debug = false) {
             .replace(/^(Nettgiro\s)?til\:\s/i, "")
             .replaceAll(".", "");
         }
-        currentState = State.FROM;
+        next(State.FROM);
         break;
       }
       case State.FROM: {
@@ -172,21 +185,22 @@ export function lexer(_input: string, debug = false) {
         if (match) {
           token.from = match.replace("Nettgiro fra: ", "");
         }
-        currentState = State.CATCH_ALL;
+        next(State.CATCH_ALL);
         break;
       }
       case State.CATCH_ALL: {
-        // Set the soruce to whatever is left
+        // Set the source to whatever is left
         const match = handleTransition(/.+/);
         if (match) {
-          token.source = match;
+          // Matches patterns like BID:1234567, REF:12345, etc.
+          token.source = stripUniqueIdentifiers(match).toLowerCase();
         }
-        currentState = State.DONE;
+        next(State.DONE);
         break;
       }
       default:
         console.log("%cERROR: UNKNOWN_STATE", "color: red");
-        currentState = State.DONE;
+        next(State.DONE);
         break;
     }
   }

@@ -15,7 +15,7 @@ export function nordeaTransformer(
   data: Record<string, string | undefined>[],
 ): PartialTransaction[] {
   return (data as Nordea[]).map((element) => {
-    const parsedDescription = lexer(element["Tittel"]);
+    const parsedDescription = lexer(element["Tittel"], true);
     const amounts = formatAmounts(element["Beløp"]);
     return {
       date: formatDate(element["Bokføringsdato"]),
