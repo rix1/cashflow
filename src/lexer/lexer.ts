@@ -55,7 +55,9 @@ export function lexer(_input: string, debug = false) {
 
   let currentState = State.MONTH_DAY as State;
   let workingInput = prepareInput(_input);
-  console.log(`\n===> working on new description: "${workingInput}"`);
+  if (debug) {
+    console.log(`\n===> working on new description: "${workingInput}"`);
+  }
   const token = {
     raw: _input,
     currency: "",
