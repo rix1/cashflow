@@ -28,13 +28,12 @@ export class CashflowDB {
         owner TEXT NOT NULL,
         original_currency TEXT,
         conversion_rate TEXT,
-        created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
-        -- Create a unique constraint on the combination of fields that identify a unique transaction
-        UNIQUE(date, original_amount, description, bank, account, owner)
+        import_date TEXT NOT NULL,
+        created_at DATETIME DEFAULT CURRENT_TIMESTAMP
       )
     `);
 
-    // Create accounts table
+    // Accounts table remains the same
     this.db.exec(`
       CREATE TABLE IF NOT EXISTS accounts (
         id INTEGER PRIMARY KEY AUTOINCREMENT,
@@ -68,24 +67,26 @@ export class CashflowDB {
     transactions: PartialTransaction[],
     userInput: UserInput,
   ): void {
-    // Using transaction for atomic operation
+    const import_date = new Date().toISOString();
+
     this.db.transaction(() => {
       const insertStmt = this.db.prepare(`
         INSERT OR IGNORE INTO transactions (
           transaction_id, date, description, incoming, outgoing, original_amount,
-          currency, bank, account, owner, original_currency, conversion_rate
+          currency, bank, account, owner, original_currency, conversion_rate,
+          import_date
         ) VALUES (
           :transaction_id, :date, :description, :incoming, :outgoing, :original_amount,
-          :currency, :bank, :account, :owner, :original_currency, :conversion_rate
+          :currency, :bank, :account, :owner, :original_currency, :conversion_rate,
+          :import_date
         )
       `);
 
+      // Account insertion remains the same
       this.db
         .prepare(
-          `
-        INSERT OR REPLACE INTO accounts (bank, account, owner, current_balance)
-        VALUES (:bank, :account, :owner, :balance)
-      `,
+          `INSERT OR REPLACE INTO accounts (bank, account, owner, current_balance)
+           VALUES (:bank, :account, :owner, :balance)`,
         )
         .run({
           bank: userInput.bank,
@@ -94,7 +95,6 @@ export class CashflowDB {
           balance: userInput.current_balance,
         });
 
-      // Insert all transactions
       let inserted = 0;
       let skipped = 0;
 
@@ -113,11 +113,15 @@ export class CashflowDB {
           owner: userInput.owner,
           original_currency: transaction.original_currency,
           conversion_rate: transaction.conversion_rate,
+          import_date,
         });
 
         if (changes > 0) {
           inserted++;
         } else {
+          console.log(
+            `Skipping duplicate transaction: ${transaction.description} on ${transaction.date}`,
+          );
           skipped++;
         }
       }
