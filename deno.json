@@ -3,5 +3,8 @@
     "dev": "deno run --watch -A --unstable-ffi src/main.ts",
     "run": "rm -rf ./out && deno run --allow-read --allow-write=./out/ --allow-env=DEBUG src/main.ts",
     "lexer": "deno run --watch --allow-read src/lexer/lexer.debug.ts"
+  },
+  "imports": {
+    "@std/csv": "jsr:@std/csv@^1.0.4"
   }
 }

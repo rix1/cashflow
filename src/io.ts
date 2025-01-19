@@ -1,3 +1,5 @@
+import { parse } from "@std/csv/parse";
+import { stringify } from "@std/csv/stringify";
 import {
   ensureFileSync,
   existsSync,
@@ -6,7 +8,6 @@ import {
   Input,
   Number,
 } from "https://deno.land/x/cliffy@v1.0.0-rc.3/prompt/mod.ts";
-import { parse, stringify } from "https://deno.land/std@0.212.0/csv/mod.ts";
 import { UserInput } from "./types.ts";
 import { ensureDirSync } from "https://deno.land/std@0.212.0/fs/ensure_dir.ts";
 
@@ -35,7 +36,7 @@ export async function getUserInput(): Promise<UserInput> {
   console.info(
     "%c%s",
     "color: ##aBaBaB",
-    "We need some information about this file. Tip: You can avoid inputing this manually by naming your statement files like this: <owner>-<bank>-<account>.csv"
+    "We need some information about this file. Tip: You can avoid inputing this manually by naming your statement files like this: <owner>-<bank>-<account>.csv",
   );
   const bank: string = await Input.prompt({
     message: "Which bank is this export from?",
@@ -72,7 +73,7 @@ export async function parseCSVFile(filePath: string) {
     const csv = await Deno.readTextFile(filePath);
     return parse(csv, {
       skipFirstRow: true,
-      separator: ";",
+      separator: filePath.endsWith(".csv") ? ";" : "\t",
       lazyQuotes: true,
     });
   } catch (error) {
@@ -97,7 +98,7 @@ const columns = [
 export function writeDataToCSV(
   filename: string,
   data: any,
-  individual = false
+  individual = false,
 ) {
   if (individual) {
     const outputCSV = stringify(data, {
@@ -125,6 +126,6 @@ export function writeDataToCSV(
     }),
     {
       append: true,
-    }
+    },
   );
 }
