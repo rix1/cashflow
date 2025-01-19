@@ -1,7 +1,7 @@
 {
   "tasks": {
-    "dev": "deno run --watch --allow-read --allow-env=DEBUG main.ts",
-    "run": "rm -rf ./out && deno run --allow-read --allow-write=./out/ --allow-env=DEBUG main.ts",
-    "lexer": "deno run --watch --allow-read lexer/lexer.debug.ts"
+    "dev": "deno run --watch -A --unstable-ffi src/main.ts",
+    "run": "rm -rf ./out && deno run --allow-read --allow-write=./out/ --allow-env=DEBUG src/main.ts",
+    "lexer": "deno run --watch --allow-read src/lexer/lexer.debug.ts"
   }
 }

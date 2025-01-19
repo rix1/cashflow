@@ -9,6 +9,7 @@ import {
   writeDataToCSV,
 } from "./io.ts";
 import { transformForBank } from "./transformers/mod.ts";
+import { getDatabase } from "./db.ts";
 
 const env = await load();
 const DEBUG = env["DEBUG"];
@@ -43,19 +44,25 @@ if (import.meta.main) {
   for await (const entry of walk("./statements/")) {
     if (entry.isFile && entry.name.endsWith(".csv")) {
       const shouldProceed = confirm(
-        `[INFO] Will start working on file "${entry.name}"`
+        `[INFO] Will start working on file "${entry.name}"`,
       );
       if (shouldProceed) {
         const userInput =
           guessUserInputFromFile(entry.name) || (await getUserInput());
 
         const rawData = await parseCSVFile(`./statements/${entry.name}`);
-        const transformedData = transformForBank(rawData, userInput);
-        writeDataToCSV(
-          `${userInput.owner}-${userInput.bank}-${userInput.account}.csv`,
-          transformedData,
-          printIndividual
-        );
+        console.log(rawData);
+
+        const db = getDatabase();
+
+        try {
+          const transformedData = transformForBank(rawData, userInput);
+          db.insertTransactions(transformedData, userInput);
+        } catch (error) {
+          console.error(error);
+        } finally {
+          db.close();
+        }
       }
     }
   }

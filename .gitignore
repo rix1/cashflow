@@ -2,3 +2,4 @@ deno.lock
 descriptions-testsuite.txt
 statements/*.csv
 out/*
+*.sqlite3
