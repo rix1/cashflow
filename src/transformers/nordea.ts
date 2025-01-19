@@ -12,7 +12,7 @@ export type Nordea = {
 };
 
 export function nordeaTransformer(
-  data: Record<string, string | undefined>[]
+  data: Record<string, string | undefined>[],
 ): PartialTransaction[] {
   return (data as Nordea[]).map((element) => {
     const parsedDescription = lexer(element["Tittel"]);
@@ -25,7 +25,7 @@ export function nordeaTransformer(
       original_amount: amounts.original_amount,
       currency: element["Valuta"],
       original_currency: parsedDescription.currency,
-      converstion_rate: parsedDescription.converstion_rate,
+      conversion_rate: parsedDescription.conversion_rate,
     };
   });
 }

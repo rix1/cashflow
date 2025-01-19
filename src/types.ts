@@ -1,5 +1,5 @@
 export type UserInput = {
-  bank: string;
+  bank: Bank;
   account: string;
   owner: string;
   current_balance: number;
@@ -8,13 +8,15 @@ export type UserInput = {
 export type PartialTransaction = {
   date: string;
   original_amount: number;
-  incoming: number | undefined;
-  outgoing: number | undefined;
+  incoming: number;
+  outgoing: number;
   description: string;
   currency: string;
-  original_currency: undefined | string;
-  converstion_rate: string;
+  original_currency: null | string;
+  conversion_rate: string;
 };
 
 export type CompleteTransaction = PartialTransaction &
   Omit<UserInput, "current_balance">;
+
+export type Bank = "nordea" | "dnb" | "handelsbanken";

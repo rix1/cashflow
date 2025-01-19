@@ -61,8 +61,6 @@ export class CashflowDB {
       userInput.owner,
     ].join("|");
 
-    console.log("unique ID ", btoa(uniqueString));
-
     return btoa(uniqueString);
   }
 
@@ -74,7 +72,7 @@ export class CashflowDB {
     this.db.transaction(() => {
       const insertStmt = this.db.prepare(`
         INSERT OR IGNORE INTO transactions (
-          date, description, incoming, outgoing, original_amount,
+          transaction_id, date, description, incoming, outgoing, original_amount,
           currency, bank, account, owner, original_currency, conversion_rate
         ) VALUES (
           :transaction_id, :date, :description, :incoming, :outgoing, :original_amount,
@@ -82,7 +80,6 @@ export class CashflowDB {
         )
       `);
 
-      // Update or insert account information
       this.db
         .prepare(
           `
@@ -100,6 +97,7 @@ export class CashflowDB {
       // Insert all transactions
       let inserted = 0;
       let skipped = 0;
+
       for (const transaction of transactions) {
         const transactionId = this.createTransactionId(transaction, userInput);
         const changes = insertStmt.run({
@@ -114,10 +112,9 @@ export class CashflowDB {
           account: userInput.account,
           owner: userInput.owner,
           original_currency: transaction.original_currency,
-          conversion_rate: transaction.converstion_rate,
+          conversion_rate: transaction.conversion_rate,
         });
 
-        // Track statistics
         if (changes > 0) {
           inserted++;
         } else {
@@ -130,6 +127,8 @@ export class CashflowDB {
       );
       insertStmt.finalize();
     })();
+
+    console.log("Done inserting...✅");
   }
 
   getTransactions(): CompleteTransaction[] {

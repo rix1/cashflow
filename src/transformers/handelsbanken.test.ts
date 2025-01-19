@@ -23,12 +23,12 @@ Deno.test("Handelsbanken transformer - outgoing", () => {
   const expected = {
     date: "2025-01-19",
     description: "REMA 1000",
-    incoming: undefined,
+    incoming: 0,
     outgoing: -150.0,
     original_amount: -150.0,
     currency: "NOK",
     original_currency: "NOK",
-    converstion_rate: "1.0000",
+    conversion_rate: "1.0000",
   };
 
   const result = handelsbankenTransformer([sampleInput])[0];
@@ -41,12 +41,12 @@ Deno.test("Handelsbanken transformer - incoming", () => {
   const expected = {
     date: "2025-01-19",
     description: "REMA 1000",
-    outgoing: undefined,
+    outgoing: 0,
     incoming: 150.0,
     original_amount: 150.0,
     currency: "NOK",
     original_currency: "NOK",
-    converstion_rate: "1.0000",
+    conversion_rate: "1.0000",
   };
 
   const result = handelsbankenTransformer([sampleInput])[0];

@@ -15,12 +15,12 @@ export enum State {
 }
 
 export type Token = {
-  currency: string | undefined;
+  currency: string | null;
   local_value: string;
   initiated_month: string;
   initiated_day: string;
   source: string;
-  converstion_rate: string;
+  conversion_rate: string;
   raw: string;
   card: string;
   paid_date: string;
@@ -35,7 +35,7 @@ function trimWhitespace(input: string) {
 }
 
 function prepareInput(input: string) {
-  if (input.startsWith('="')) {
+  if (input?.startsWith('="')) {
     return input.replace(/="(.+)"/, "$1");
   }
   return input;
@@ -65,7 +65,7 @@ export function lexer(_input: string, debug = false) {
     initiated_month: "",
     initiated_day: "",
     source: "",
-    converstion_rate: "",
+    conversion_rate: "",
     card: "",
     paid_date: "",
     paid_to: "",
@@ -94,7 +94,7 @@ export function lexer(_input: string, debug = false) {
   };
 
   function handleTransition(regex: RegExp) {
-    const currentMatch = regex.exec(workingInput.trim());
+    const currentMatch = regex.exec((workingInput || "").trim());
     if (!currentMatch) {
       return undefined;
     }
@@ -136,7 +136,7 @@ export function lexer(_input: string, debug = false) {
       case State.CONVERSION_RATE: {
         const match = handleTransition(/Kurs\:\s\d{1,}\.\d+/);
         if (match) {
-          token.converstion_rate = match.replace("Kurs: ", "");
+          token.conversion_rate = match.replace("Kurs: ", "");
         }
         currentState = State.CARD;
         break;

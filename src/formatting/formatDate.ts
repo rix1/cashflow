@@ -2,7 +2,8 @@ function dateToYYYYMMDD(date: string) {
   return new Date(date).toISOString().split("T")[0];
 }
 
-export function formatDate(incoming: string) {
+export function formatDate(incoming: string | undefined) {
+  if (!incoming) return "";
   if (!incoming.match(/\d/)) {
     // Some dates might not contain any numbers, e.g. "Reservert"
     return incoming;

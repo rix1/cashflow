@@ -17,12 +17,12 @@ Deno.test("Nordea transformer test suite", async (t) => {
     const expected = {
       date: "2025-01-17",
       description: "TIL STIFTELSEN SOS-BARNEBYER NORGE",
-      incoming: undefined,
+      incoming: 0,
       outgoing: -300.0,
       original_amount: -300.0,
       currency: "NOK",
       original_currency: "",
-      converstion_rate: "",
+      conversion_rate: "",
     };
 
     const result = nordeaTransformer([input])[0];
@@ -44,12 +44,12 @@ Deno.test("Nordea transformer test suite", async (t) => {
     const expected = {
       date: "2025-01-17",
       description: "OPENAI *CHATGPT SUBSCR",
-      incoming: undefined,
+      incoming: 0,
       outgoing: -291.13,
       original_amount: -291.13,
       currency: "NOK",
       original_currency: "",
-      converstion_rate: "",
+      conversion_rate: "",
     };
 
     const result = nordeaTransformer([input])[0];
@@ -71,12 +71,12 @@ Deno.test("Nordea transformer test suite", async (t) => {
     const expected = {
       date: "2025-01-16",
       description: "VOI NO",
-      incoming: undefined,
+      incoming: 0,
       outgoing: -22.0,
       original_amount: -22.0,
       currency: "NOK",
       original_currency: "",
-      converstion_rate: "",
+      conversion_rate: "",
     };
 
     const result = nordeaTransformer([input])[0];
@@ -122,32 +122,32 @@ Deno.test("Nordea transformer test suite", async (t) => {
       {
         date: "2025-01-17",
         description: "TIL STIFTELSEN SOS-BARNEBYER NORGE",
-        incoming: undefined,
+        incoming: 0,
         outgoing: -300.0,
         original_amount: -300.0,
         currency: "NOK",
         original_currency: "",
-        converstion_rate: "",
+        conversion_rate: "",
       },
       {
         date: "2025-01-17",
         description: "OPENAI *CHATGPT SUBSCR",
-        incoming: undefined,
+        incoming: 0,
         outgoing: -291.13,
         original_amount: -291.13,
         currency: "NOK",
         original_currency: "",
-        converstion_rate: "",
+        conversion_rate: "",
       },
       {
         date: "2025-01-16",
         description: "VOI NO",
-        incoming: undefined,
+        incoming: 0,
         outgoing: -22.0,
         original_amount: -22.0,
         currency: "NOK",
         original_currency: "",
-        converstion_rate: "",
+        conversion_rate: "",
       },
     ];
 

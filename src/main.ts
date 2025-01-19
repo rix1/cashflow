@@ -36,10 +36,7 @@ if (import.meta.main) {
   );
   alert("Ready?");
 
-  const printIndividual: boolean = await Confirm.prompt({
-    message:
-      "We'll automatically merge all bank statements into one. Do you want to print individual statements as well?",
-  });
+  const db = getDatabase();
 
   for await (const entry of walk("./statements/")) {
     if (entry.isFile && entry.name.endsWith(".csv")) {
@@ -50,21 +47,23 @@ if (import.meta.main) {
         const userInput =
           guessUserInputFromFile(entry.name) || (await getUserInput());
 
-        const rawData = await parseCSVFile(`./statements/${entry.name}`);
-        console.log(rawData);
-
-        const db = getDatabase();
+        const rawData = await parseCSVFile(
+          `./statements/${entry.name}`,
+          userInput.bank,
+        );
 
         try {
           const transformedData = transformForBank(rawData, userInput);
+
+          console.log(transformedData);
+
           db.insertTransactions(transformedData, userInput);
         } catch (error) {
           console.error(error);
-        } finally {
-          db.close();
         }
       }
     }
   }
   alert(`✅ All done! See output in ./out/`);
+  db.close();
 }

@@ -4,7 +4,7 @@ import { nordeaTransformer } from "./nordea.ts";
 
 export function transformForBank(
   data: Record<string, string | undefined>[],
-  userInput: UserInput
+  userInput: UserInput,
 ) {
   switch (userInput.bank) {
     case "nordea":

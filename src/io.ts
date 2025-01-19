@@ -8,7 +8,7 @@ import {
   Input,
   Number,
 } from "https://deno.land/x/cliffy@v1.0.0-rc.3/prompt/mod.ts";
-import { UserInput } from "./types.ts";
+import { Bank, UserInput } from "./types.ts";
 import { ensureDirSync } from "https://deno.land/std@0.212.0/fs/ensure_dir.ts";
 
 export function ask(question: string, fallback?: string): string {
@@ -24,7 +24,7 @@ export function guessUserInputFromFile(filename: string): UserInput | void {
     return undefined;
   } else {
     return {
-      bank: filenameparts[1],
+      bank: filenameparts[1] as Bank,
       account: filenameparts[2],
       owner: filenameparts[0],
       current_balance: 0,
@@ -38,11 +38,11 @@ export async function getUserInput(): Promise<UserInput> {
     "color: ##aBaBaB",
     "We need some information about this file. Tip: You can avoid inputing this manually by naming your statement files like this: <owner>-<bank>-<account>.csv",
   );
-  const bank: string = await Input.prompt({
+  const bank = (await Input.prompt({
     message: "Which bank is this export from?",
     list: true,
     id: "bank",
-  });
+  })) as Bank;
   const account: string = await Input.prompt({
     message: "What type of account is this?",
     list: true,
@@ -66,14 +66,12 @@ export async function getUserInput(): Promise<UserInput> {
   };
 }
 
-type Bank = "nordea" | "dnb" | "handelsbanken";
-
-export async function parseCSVFile(filePath: string) {
+export async function parseCSVFile(filePath: string, bank: Bank) {
   try {
     const csv = await Deno.readTextFile(filePath);
     return parse(csv, {
       skipFirstRow: true,
-      separator: filePath.endsWith(".csv") ? ";" : "\t",
+      separator: bank === "nordea" ? ";" : ",",
       lazyQuotes: true,
     });
   } catch (error) {
