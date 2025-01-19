@@ -73,7 +73,7 @@ export function lexer(_input: string, debug = false) {
     originalInput: string,
     extracted: string,
     remainingInput: string,
-    nextState: State
+    nextState: State,
   ) => {
     if (debug) {
       console.log(
@@ -86,7 +86,7 @@ export function lexer(_input: string, debug = false) {
         "color: white",
         "color: green",
         "color: #56575D",
-        currentState === State.ERROR ? "color: red" : ""
+        currentState === State.ERROR ? "color: red" : "",
       );
     }
   };
@@ -120,7 +120,7 @@ export function lexer(_input: string, debug = false) {
       }
       case State.VALUE: {
         const match = handleTransition(
-          /((NOK|EUR|USD|DKK|HUF|GBP|SEK)\s\d+\.\d+\s)/
+          /((NOK|EUR|USD|DKK|HUF|GBP|SEK)\s\d+\.\d+\s)/,
         );
 
         if (match) {

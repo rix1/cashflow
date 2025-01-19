@@ -2,6 +2,7 @@ import { assertEquals } from "https://deno.land/std@0.210.0/assert/mod.ts";
 import { lexer } from "./lexer.ts";
 
 const sourceTests = [
+  ["JOKER ILA", "JOKER ILA"],
   ['="*7889 30.10 NOK 182.30 JOKER ILA Kurs: 1.0000"', "JOKER ILA"],
   ['="*7889 31.10 NOK 39.00 RUTERAPPEN Kurs: 1.0000"', "RUTERAPPEN"],
   [

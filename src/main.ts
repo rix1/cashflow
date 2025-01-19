@@ -26,13 +26,13 @@ if (import.meta.main) {
   console.info(
     "%c%s",
     "color: #FFD700; font-weight: bold",
-    `Welcome to cashflow! 💰 🏄‍♂️`
+    `Welcome to cashflow! 💰 🏄‍♂️`,
   );
 
   console.info(
     "%c%s",
     "color: ##aBaBaB",
-    "I'll read any CSV files in the ./statements/ directory, transform them and output them to ./out/.\n"
+    "I'll read any CSV files in the ./statements/ directory, transform them and output them to ./out/.\n",
   );
   alert("Ready?");
 
