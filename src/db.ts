@@ -16,6 +16,7 @@ export class CashflowDB {
     this.db.exec(`
       CREATE TABLE IF NOT EXISTS transactions (
         id INTEGER PRIMARY KEY AUTOINCREMENT,
+        transaction_id TEXT,
         date TEXT NOT NULL,
         description TEXT,
         incoming REAL,
@@ -47,6 +48,24 @@ export class CashflowDB {
     `);
   }
 
+  private createTransactionId(
+    transaction: PartialTransaction,
+    userInput: UserInput,
+  ): string {
+    const uniqueString = [
+      transaction.date,
+      transaction.original_amount,
+      transaction.description,
+      userInput.bank,
+      userInput.account,
+      userInput.owner,
+    ].join("|");
+
+    console.log("unique ID ", btoa(uniqueString));
+
+    return btoa(uniqueString);
+  }
+
   insertTransactions(
     transactions: PartialTransaction[],
     userInput: UserInput,
@@ -58,7 +77,7 @@ export class CashflowDB {
           date, description, incoming, outgoing, original_amount,
           currency, bank, account, owner, original_currency, conversion_rate
         ) VALUES (
-          :date, :description, :incoming, :outgoing, :original_amount,
+          :transaction_id, :date, :description, :incoming, :outgoing, :original_amount,
           :currency, :bank, :account, :owner, :original_currency, :conversion_rate
         )
       `);
@@ -82,7 +101,9 @@ export class CashflowDB {
       let inserted = 0;
       let skipped = 0;
       for (const transaction of transactions) {
+        const transactionId = this.createTransactionId(transaction, userInput);
         const changes = insertStmt.run({
+          transaction_id: transactionId,
           date: transaction.date,
           description: transaction.description,
           incoming: transaction.incoming,
