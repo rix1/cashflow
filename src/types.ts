@@ -11,7 +11,7 @@ export type PartialTransaction = {
   incoming: number | undefined;
   outgoing: number | undefined;
   description: string;
-  currency: "NOK";
+  currency: string;
   original_currency: undefined | string;
   converstion_rate: string;
 };

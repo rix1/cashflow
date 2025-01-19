@@ -2,30 +2,44 @@ import { formatDate } from "../formatting/formatDate.ts";
 import { lexer } from "../lexer/lexer.ts";
 import { PartialTransaction } from "../types.ts";
 
-export type HandelsBanken = {
+export type HandelsbankenTransaction = {
   "Utført dato": string;
-  "Beløp ut": string;
+  "Bokført dato": string;
+  Rentedato: string;
+  Beskrivelse: string;
+  Type: string;
+  Undertype: string;
+  "Fra konto": string;
+  Avsender: string;
+  "Til konto": string;
+  Mottakernavn: string;
   "Beløp inn": string;
+  "Beløp ut": string;
+  Valuta: string;
+  Status: string;
   "Melding/KID/Fakt.nr": string;
 };
 
 export function handelsbankenTransformer(
-  data: Record<string, string | undefined>[],
+  data: HandelsbankenTransaction[],
 ): PartialTransaction[] {
-  return (data as HandelsBanken[]).map((element) => {
-    const parsedDescription = lexer(element["Melding/KID/Fakt.nr"]);
-
-    const incoming = Number(element["Beløp inn"]);
-    const outgoing = Number(element["Beløp inn"]);
-    console.log(element);
+  return data.map((transaction) => {
+    const parsedDescription = lexer(transaction["Melding/KID/Fakt.nr"]);
+    const incoming = transaction["Beløp inn"]
+      ? Number(transaction["Beløp inn"])
+      : undefined;
+    const outgoing = transaction["Beløp ut"]
+      ? Number(transaction["Beløp ut"])
+      : undefined;
+    const original_amount = incoming ?? outgoing ?? 0;
 
     return {
-      date: formatDate(element["Utført dato"]),
-      description: parsedDescription.source,
-      incoming: incoming,
-      outgoing: outgoing,
-      original_amount: incoming || outgoing,
-      currency: "NOK",
+      date: formatDate(transaction["Utført dato"]),
+      description: parsedDescription.source || transaction["Mottakernavn"],
+      incoming,
+      outgoing,
+      original_amount,
+      currency: transaction["Valuta"],
       original_currency: parsedDescription.currency,
       converstion_rate: parsedDescription.converstion_rate,
     };
