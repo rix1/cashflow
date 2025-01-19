@@ -16,5 +16,5 @@ export type PartialTransaction = {
   converstion_rate: string;
 };
 
-type CompleteTransaction = PartialTransaction &
+export type CompleteTransaction = PartialTransaction &
   Omit<UserInput, "current_balance">;

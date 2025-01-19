@@ -114,6 +114,11 @@ The following assumes you have Deno v1.39 or newer installed.
 1. Clone this repo.
 2. Make a CSV export of your bank statement and place them in `./statements/`.
 
+> [!tip]
+> Use the following name pattern for your files for automatic categorization of the different sources:
+> `<user>-<bank>-<account_name>.csv`.
+> Example: `rix1-handelsbanken-brukskonto.csv`.
+
 #### Developing the lexer
 
 To iterate on the description lexer, copy the "description" (or similar) column
