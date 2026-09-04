@@ -1,144 +1,132 @@
-# Cashflow - Bank Statement Parser
+# Cashflow
 
-Cashflow is a tool designed to simplify the management of personal finances by
-parsing and normalizing CSV exports from Norwegian bank statements. The primary
-goal of Cashflow is to transform messy and inconsistent transaction descriptions
-into a uniform, non-unique format. This normalization makes it significantly
-easier to categorize and summarize expenses for household finance management
-across different accounts and banks.
+Household finance overview built from CSV exports of Norwegian bank
+statements. Import the exports, let the categorizer sort them, and browse the
+result in a local web UI: monthly income and expenses, category grid,
+recurring fixed costs, mortgage interest vs principal, and a what-if calculator
+for a new loan.
 
-## Goals and Features
+Everything runs locally with Deno and SQLite. No data leaves your machine.
 
-- **Exstensible Description Parsing**: Handles transaction descriptions from
-  different banks. The aim is to make it relatively easy to add custom parsers
-  in the future.
-- **Normalize Transaction Sources**: Converts similar transaction descriptions
-  to a non-unique source name, facilitating easier categorization.
-- **Support for Multiple Currencies**: Parses and extracts transactions in
-  different currencies.
-- **Deno-Based**: Written in Deno, providing a modern and secure runtime for
-  JavaScript and TypeScript.
-- **Debugging Support**: Includes a debug mode for detailed logging of the
-  parsing process.
+## Direction
 
-## How it Works
+The first version of this repo normalized bank CSVs into a combined file for
+spreadsheet analysis. It has grown into the whole workflow: import, dedupe,
+categorize, browse and adjust, so a yearly review takes minutes instead of an
+evening, and questions like "what are our fixed costs" or "what does a bigger
+loan leave us per month" have a page.
 
-Cashflow's _description parser_ uses a lexer-based approach, inspired by
-programming language compilers, to parse the transaction descriptions. The lexer
-function breaks down the parsing process into distinct stages, each responsible
-for extracting specific information like date, currency, value, source, and
-conversion rate. This method avoids the complexity and maintainability issues
-often associated with regular expressions for complex parsing tasks.
+- `docs/PLAN.md` has the review of the old code, the phases and the current
+  status.
+- `AGENTS.md` has conventions and invariants for anyone (human or AI) changing
+  the code.
 
-## Example
+## Quick start
 
-Given these inputs descriptions
+```sh
+# 1. Describe your household (owners + account numbers). The real file is gitignored.
+cp accounts.example.json accounts.json
 
-- `="AniCura Grunerløkka Betalt: 29.12.23"`
-- `="*6483 19.10 NOK 112.80 JOKER ILA Kurs: 1.0000"`
-- `="*7889 25.08 DKK 120.00 REFFEN Kurs: 1.5879"`
+# 2. Drop CSV exports into ./statements/ (any filename)
 
-the lexer output the following:
+# 3. Import and categorize
+deno task import
 
-```javascript
-{
-  raw: '="AniCura Grunerløkka Betalt: 29.12.23"',
-  currency: "",
-  local_value: "",
-  initiated_month: "",
-  initiated_day: "",
-  source: "AniCura Grunerløkka",
-  converstion_rate: "",
-  card: "",
-  paid_date: "2023-12-29",
-  paid_to: ""
-}
-{
-  raw: '="*6483 19.10 NOK 112.80 JOKER ILA Kurs: 1.0000"',
-  currency: "NOK",
-  local_value: "112.80",
-  initiated_month: "10",
-  initiated_day: "19",
-  source: "JOKER ILA",
-  converstion_rate: "1.0000",
-  card: "*6483",
-  paid_date: "",
-  paid_to: ""
-}
-{
-  raw: '="*7889 25.08 DKK 120.00 REFFEN Kurs: 1.5879"',
-  currency: "DKK",
-  local_value: "120.00",
-  initiated_month: "08",
-  initiated_day: "25",
-  source: "REFFEN",
-  converstion_rate: "1.5879",
-  card: "*7889",
-  paid_date: "",
-  paid_to: ""
-}
+# 4. Browse
+deno task serve      # http://127.0.0.1:8000
 ```
 
-## Long-Term Goal
+Requires Deno 2.x.
 
-The long-term vision for Cashflow is to evolve into a collection of tools that
-can transform CSV bank statements from various accounts into a standardized
-format. This standardized data can then be easily imported into Excel/Google
-Sheets for in-depth analysis and financial tracking.
+## Supported exports
 
-## Usage
+| Bank          | Format                                                                 |
+| ------------- | ---------------------------------------------------------------------- |
+| Handelsbanken | v1 (comma, UTF-8, until early 2025) and v2 (semicolon, ISO-8859-1, multi-line messages, balance footer) |
+| Nordea        | semicolon, UTF-8 with BOM                                              |
 
-Currently, Cashflow is tailored for personal use, focusing on the specific needs
-of household finance management. Future updates may expand its applicability to
-a broader audience.
+The bank is detected from the CSV header and the encoding is sniffed, so file
+names do not matter. The account is identified from the account number inside
+the file and mapped to an owner through `accounts.json`. If the account is
+unknown the import stops and tells you what to add.
 
-### Supported banks
+Adding a bank means adding one file in `src/importers/` that implements the
+`Importer` interface (detect header, parse rows into `NormalizedRow`) and
+registering it in `src/importers/mod.ts`.
 
-We support CSV exports from the following Norwegian banks:
+## Commands
 
-- [Handelsbanken](https://www.handelsbanken.no/no/)
-- [Nordea](https://www.nordea.no/)
-- [DNB](https://www.dnb.no/)
+| Command                       | What it does                                                                                     |
+| ----------------------------- | ------------------------------------------------------------------------------------------------ |
+| `deno task import [files...]` | Imports every `.csv` in `./statements` (or the given files), skips lines already imported, then categorizes. |
+| `deno task rebuild`           | Wipes imported data and re-imports everything. Rules and manual category choices are kept.       |
+| `deno task categorize`        | Re-runs categorization only.                                                                     |
+| `deno task serve`             | Starts the web UI on http://127.0.0.1:8000 (`--port N` to change).                               |
+| `deno task dev`               | Same, restarting on file changes.                                                                |
+| `deno task test`              | Runs the test suite.                                                                             |
+| `deno task check`             | Type-check, lint and format check.                                                               |
 
-### Available commands
+## How it works
 
-- `deno task run`: This will first clean the `./out/` directory before starting
-  the CLI.
-- `deno task dev`: This will start the CLI, watching for file changes.
-- `deno task lexer`: For iterating on the lexer. See details below.
+**Import.** Each statement line becomes a normalized transaction with a
+fingerprint (account, dates, amount, description, message, plus an ordinal for
+identical lines in the same file). Re-importing overlapping exports is safe:
+identical fingerprints are skipped. Pending (`Reservert`) lines are skipped
+because they show up booked in the next export. Opening and closing balances
+from Handelsbanken footers are stored for reconciliation, and mortgage messages
+(`Avdrag / Renter / Terminomkostninger`) are parsed into a `loan_payments`
+table.
 
-### Developing locally
+**Merchant normalization** (`src/normalize/merchant.ts`) turns
+`Vipps*FLYTOGET AS`, `Spotify P411AB172B` or `27.10 JOKER MØLLERGAT ... OSLO`
+into stable merchant keys so rules stay short.
 
-The following assumes you have Deno v1.39 or newer installed.
+**Categorization** (`src/categorize/`) is layered, first match wins:
 
-1. Clone this repo.
-2. Make a CSV export of your bank statement and place them in `./statements/`.
+1. Manual overrides made in the UI (keyed by fingerprint, survive rebuilds).
+2. Bank signals: salary, loan repayment, fees, interest, cash.
+3. Transfers: counterparty account in `accounts.json`, or counterparty name
+   matching an owner alias. Own-to-own transfers, partner transfers, savings
+   deposits and loan payoffs are excluded from income and expenses. Opposite
+   amounts across own accounts within three days are linked.
+4. Expense refunds from an employer.
+5. Rules: regexes on merchant, description, counterparty, message or bank
+   type. Seed rules live in `src/categorize/seed-rules.ts`; rules created from
+   the UI live in the database and take priority.
+6. Everything else is `uncategorized` and appears in the review queue.
 
-> [!tip]
-> Use the following name pattern for your files for automatic categorization of the different sources:
-> `<user>-<bank>-<account_name>.csv`.
-> Example: `rix1-handelsbanken-brukskonto.csv`.
+**Web UI** (`src/web/`) is Hono with server-rendered JSX and htmx, no build
+step. Chart.js and htmx load from cdnjs unless copies exist in
+`src/web/static/` (`htmx.min.js`, `chart.umd.min.js`).
 
-#### Developing the lexer
+## Privacy
 
-To iterate on the description lexer, copy the "description" (or similar) column
-from a CSV and save it as `./lexer/descriptions-testsuite.txt`.
+`statements/`, `accounts.json` and the database are gitignored. They hold real
+names and account numbers and must stay out of commits, fixtures and docs.
 
-To see the output of parsing these lines, run `deno task lexer`. This will start
-a process that reads each line from the test suite and pass them through the
-lexer, printing the result.
+## Database
 
-We also have a test suite to ensure that we don't break anything. To run tests,
-simply run `deno test --watch`.
+`./cashflow.sqlite3` (gitignored) is derived data and can always be rebuilt
+from the CSVs. Tables: `accounts`, `imports`, `transactions`, `loan_payments`,
+`categories`, `rules`, `overrides`. A database from the previous version of
+this tool is renamed to `cashflow.v1-backup-<timestamp>.sqlite3` on first run.
 
-## Contributing
+## Layout
 
-As Cashflow is in its early stages, contributions, suggestions, and feedback are
-highly welcomed. Whether it's extending the parser to handle new formats,
-improving existing features, or providing ideas for future development, your
-input is invaluable.
+```
+src/
+  main.ts            CLI entry (import, rebuild, categorize, serve)
+  config.ts          accounts.json loader
+  db/                schema + connection
+  importers/         encoding sniffing, bank readers, fingerprints, import service
+  lexer/             card-description lexer (currency, rate, card, merchant)
+  normalize/         merchant normalizer
+  categorize/        categories, seed rules, engine, transfer linking, recurring detection
+  web/               Hono server, queries, JSX views
+docs/PLAN.md         review of v1, the phased plan and current status
+AGENTS.md            conventions and invariants for contributors
+```
 
 ## License
 
-Cashflow is released under MIT. For more details, see the LICENSE file in the
-repository.
+MIT, see LICENCE.md.
