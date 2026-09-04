@@ -2,7 +2,7 @@ import { lexer } from "./lexer.ts";
 
 if (import.meta.main) {
   const testSuite = await Deno.readTextFile(
-    "./lexer/descriptions-testsuite.txt"
+    "./src/lexer/descriptions-testsuite.txt",
   )
     .then((text) => text.split("\n"))
     .then((lines) => lines.filter(Boolean));

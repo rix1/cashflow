@@ -52,11 +52,6 @@ function normalizeDescription(input: string): string {
   return result.trim();
 }
 
-function stripUniqueIdentifiers(input: string): string {
-  // Matches patterns like BID:1234567, REF:12345, etc.
-  return input.replace(/[A-Z]+:\d{4,}/g, "").trim();
-}
-
 function trimWhitespace(input: string) {
   return input.trim().split(" ").filter(Boolean).join(" ");
 }
@@ -96,6 +91,7 @@ export function lexer(_input: string, debug = false) {
     card: "",
     paid_date: "",
     paid_to: "",
+    from: "",
   } as Token;
 
   const transitionLog = (
@@ -146,7 +142,9 @@ export function lexer(_input: string, debug = false) {
   while (currentState !== State.DONE) {
     switch (currentState) {
       case State.MONTH_DAY: {
-        const match = handleTransition(/\s\d{1,2}\.\d{1,2}\s/);
+        // " 19.10 " inside card descriptions, or "05.11 " leading the newer
+        // Handelsbanken "DD.MM MERCHANT STREET CITY" format.
+        const match = handleTransition(/(^|\s)\d{1,2}\.\d{1,2}\s/);
         if (match) {
           const [day, month] = match.split(".");
           token.initiated_day = day;

@@ -1,4 +1,4 @@
-import { assertEquals } from "https://deno.land/std@0.210.0/assert/mod.ts";
+import { assertEquals } from "@std/assert";
 import { lexer } from "./lexer.ts";
 
 const sourceTests = [
@@ -32,13 +32,18 @@ const sourceTests = [
     '="*7889 14.07 GBP 9.99 GOOGLE YouTube Videos Kurs: 13.4675"',
     "GOOGLE YouTube Videos",
   ],
+  ["05.11 CORDIAL AS FROGNERVEIEN OSLO", "CORDIAL AS FROGNERVEIEN OSLO"],
+  [
+    "27.10 JOKER MØLLERGAT MØLLERGATA 3 OSLO",
+    "JOKER MØLLERGAT MØLLERGATA 3 OSLO",
+  ],
 ];
 
 Deno.test("Lexer:Source", async (t) => {
   for (let index = 0; index < sourceTests.length; index++) {
     const [input, expected] = sourceTests[index];
     await t.step(`formats ${input}`, () => {
-      const result = lexer(input, true);
+      const result = lexer(input);
       assertEquals(result.source, expected);
     });
   }
@@ -56,7 +61,7 @@ Deno.test("Lexer:To", async (t) => {
   for (let index = 0; index < paid_to_tests.length; index++) {
     const [input, expected] = paid_to_tests[index];
     await t.step(`formats ${input}`, () => {
-      const result = lexer(input, true);
+      const result = lexer(input);
       assertEquals(result.paid_to, expected);
     });
   }
@@ -70,7 +75,7 @@ Deno.test("Lexer:From", async (t) => {
   for (let index = 0; index < paid_from_tests.length; index++) {
     const [input, expected] = paid_from_tests[index];
     await t.step(`formats ${input}`, () => {
-      const result = lexer(input, true);
+      const result = lexer(input);
       assertEquals(result.from, expected);
     });
   }
@@ -99,7 +104,7 @@ const merchantNormalizationTests = [
 Deno.test("Lexer: Merchant name normalization", async (t) => {
   for (const [input, expected] of merchantNormalizationTests) {
     await t.step(`normalizes "${input}"`, () => {
-      const result = lexer(input, true);
+      const result = lexer(input);
       assertEquals(result.source, expected);
     });
   }
