@@ -1,0 +1,232 @@
+import type { FC } from "hono/jsx";
+import { CATEGORY_BY_KEY } from "../../categorize/categories.ts";
+import { monthLabel, monthsBetween, nok, pct } from "../format.ts";
+import type { Averages, CategoryTotal, Gap, MonthlyFlow } from "../queries.ts";
+import { ChartScript, Money, PeriodFilters } from "./layout.tsx";
+
+type Props = {
+  from: string;
+  to: string;
+  owner?: string;
+  owners: string[];
+  flows: MonthlyFlow[];
+  averages: Averages;
+  topCategories: CategoryTotal[];
+  gaps: Gap[];
+  uncategorized: { count: number; sum: number };
+};
+
+export const Dashboard: FC<Props> = (
+  {
+    from,
+    to,
+    owner,
+    owners,
+    flows,
+    averages,
+    topCategories,
+    gaps,
+    uncategorized,
+  },
+) => {
+  const months = monthsBetween(from, to);
+  const byMonth = new Map<
+    string,
+    { income: number; expense: number; saving: number }
+  >();
+  for (const m of months) byMonth.set(m, { income: 0, expense: 0, saving: 0 });
+  for (const f of flows) {
+    const row = byMonth.get(f.month)!;
+    row.income += f.income;
+    row.expense += f.expense;
+    row.saving += f.saving;
+  }
+  const savingsRate = averages.income > 0
+    ? averages.net / averages.income
+    : null;
+  const ownerQuery = owner ? `&owner=${encodeURIComponent(owner)}` : "";
+  const gapsInPeriod = gaps.filter((g) =>
+    g.to >= `${from}-01` && g.from <= `${to}-31`
+  );
+
+  const chart = {
+    type: "bar",
+    data: {
+      labels: months.map(monthLabel),
+      datasets: [
+        {
+          label: "Inntekt",
+          data: months.map((m) => Math.round(byMonth.get(m)!.income)),
+          backgroundColor: "#2f7d4f",
+        },
+        {
+          label: "Utgifter",
+          data: months.map((m) => Math.round(-byMonth.get(m)!.expense)),
+          backgroundColor: "#b3402f",
+        },
+        {
+          label: "Netto",
+          type: "line",
+          data: months.map((m) =>
+            Math.round(byMonth.get(m)!.income + byMonth.get(m)!.expense)
+          ),
+          borderColor: "#2f5d8a",
+          backgroundColor: "#2f5d8a",
+          tension: 0.2,
+        },
+      ],
+    },
+    options: {
+      responsive: true,
+      maintainAspectRatio: false,
+      plugins: { legend: { position: "bottom" } },
+      scales: { y: { ticks: { callback: "__nok__" } } },
+    },
+  };
+
+  return (
+    <>
+      <h1>Oversikt {owner ? `· ${owner}` : "· husholdning"}</h1>
+      <PeriodFilters
+        from={from}
+        to={to}
+        owner={owner}
+        owners={owners}
+        action="/"
+      />
+      {gapsInPeriod.length > 0 && (
+        <div class="callout">
+          Mangler data i perioden:{" "}
+          {gapsInPeriod.map((g) =>
+            `${g.account.owner} ${g.account.bank} ${g.account.name} (${g.from} → ${g.to})`
+          ).join(", ")}. Tallene for de månedene er for lave.{" "}
+          <a href="/data">Detaljer</a>
+        </div>
+      )}
+      <div class="tiles">
+        <div class="tile">
+          <div class="label">Inntekt / mnd</div>
+          <div class="value pos">{nok(averages.income)}</div>
+          <div class="sub">snitt over {averages.months} mnd</div>
+        </div>
+        <div class="tile">
+          <div class="label">Utgifter / mnd</div>
+          <div class="value neg">{nok(-averages.expense)}</div>
+          <div class="sub">hvorav boliglån {nok(-averages.mortgage)}</div>
+        </div>
+        <div class="tile">
+          <div class="label">Netto / mnd</div>
+          <div class={`value ${averages.net >= 0 ? "pos" : "neg"}`}>
+            {nok(averages.net)}
+          </div>
+          <div class="sub">sparerate {pct(savingsRate)}</div>
+        </div>
+        <div class="tile">
+          <div class="label">Til sparing / mnd</div>
+          <div class="value">{nok(-averages.saving)}</div>
+          <div class="sub">netto flyttet til sparekontoer</div>
+        </div>
+        <div class="tile">
+          <div class="label">Ukategorisert</div>
+          <div class="value warn">{nok(uncategorized.sum)}</div>
+          <div class="sub">
+            {uncategorized.count} transaksjoner ·{" "}
+            <a href={`/review${owner ? `?owner=${owner}` : ""}`}>gå gjennom</a>
+          </div>
+        </div>
+      </div>
+
+      <div class="card">
+        <div class="chart">
+          <canvas id="flow-chart"></canvas>
+        </div>
+        <ChartScript id="flow-chart" config={chart} />
+      </div>
+
+      <div class="grid2">
+        <div>
+          <h2>Per måned</h2>
+          <div class="tablewrap">
+            <table>
+              <thead>
+                <tr>
+                  <th>Måned</th>
+                  <th class="num">Inntekt</th>
+                  <th class="num">Utgifter</th>
+                  <th class="num">Netto</th>
+                  <th class="num">Sparing</th>
+                </tr>
+              </thead>
+              <tbody>
+                {months.map((m) => {
+                  const r = byMonth.get(m)!;
+                  return (
+                    <tr>
+                      <td>
+                        <a href={`/transactions?month=${m}${ownerQuery}`}>
+                          {monthLabel(m)}
+                        </a>
+                      </td>
+                      <td class="num">{nok(r.income)}</td>
+                      <td class="num">{nok(r.expense)}</td>
+                      <td class="num">
+                        <Money value={r.income + r.expense} signed />
+                      </td>
+                      <td class="num">{nok(-r.saving)}</td>
+                    </tr>
+                  );
+                })}
+                <tr class="subtotal">
+                  <td>Snitt</td>
+                  <td class="num">{nok(averages.income)}</td>
+                  <td class="num">{nok(averages.expense)}</td>
+                  <td class="num">
+                    <Money value={averages.net} signed />
+                  </td>
+                  <td class="num">{nok(-averages.saving)}</td>
+                </tr>
+              </tbody>
+            </table>
+          </div>
+        </div>
+        <div>
+          <h2>Største utgiftskategorier</h2>
+          <div class="tablewrap">
+            <table>
+              <thead>
+                <tr>
+                  <th>Kategori</th>
+                  <th class="num">Totalt</th>
+                  <th class="num">Per mnd</th>
+                  <th class="num">Antall</th>
+                </tr>
+              </thead>
+              <tbody>
+                {topCategories.map((c) => (
+                  <tr>
+                    <td>
+                      <a
+                        href={`/transactions?category=${
+                          encodeURIComponent(c.category_key)
+                        }&from=${from}&to=${to}${ownerQuery}`}
+                      >
+                        {CATEGORY_BY_KEY.get(c.category_key)?.name ??
+                          c.category_key}
+                      </a>
+                      <span class="muted small">
+                        · {CATEGORY_BY_KEY.get(c.category_key)?.group}
+                      </span>
+                    </td>
+                    <td class="num">{nok(c.sum)}</td>
+                    <td class="num">{nok(c.sum / averages.months)}</td>
+                    <td class="num">{c.count}</td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
+        </div>
+      </div>
+    </>
+  );
+};
