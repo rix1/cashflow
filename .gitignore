@@ -3,3 +3,9 @@ descriptions-testsuite.txt
 statements/*.csv
 out/*
 *.sqlite3
+*.sqlite3-journal
+*.sqlite3-wal
+*.sqlite3-shm
+accounts.json
+.env
+.DS_Store

@@ -1,0 +1,39 @@
+{
+  "owners": {
+    "alice": {
+      "name": "Alice",
+      "aliases": ["Alice Example", "ALICE EXAMPLE", "A EXAMPLE"]
+    },
+    "bob": {
+      "name": "Bob",
+      "aliases": ["Bob Example"]
+    }
+  },
+  "accounts": [
+    {
+      "number": "9053 06 12345",
+      "owner": "alice",
+      "bank": "handelsbanken",
+      "name": "brukskonto"
+    },
+    {
+      "number": "6219.12.12345",
+      "owner": "alice",
+      "bank": "nordea",
+      "name": "brukskonto"
+    },
+    {
+      "number": "9053 71 12345",
+      "owner": "alice",
+      "bank": "handelsbanken",
+      "name": "boliglån",
+      "kind": "loan"
+    },
+    {
+      "number": "9053 06 54321",
+      "owner": "bob",
+      "bank": "handelsbanken",
+      "name": "brukskonto"
+    }
+  ]
+}
