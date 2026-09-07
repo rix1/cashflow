@@ -357,6 +357,7 @@ export function mortgageByMonth(db: Database): MortgageMonth[] {
 export type Averages = {
   months: number;
   income: number;
+  salary: number;
   expense: number;
   expenseExMortgage: number;
   mortgage: number;
@@ -370,6 +371,7 @@ export function averages(db: Database, p: Period): Averages {
   const row = db
     .prepare(
       `SELECT SUM(${INCOME_EXPR}) AS income, SUM(${EXPENSE_EXPR}) AS expense,
+              SUM(CASE WHEN t.category_key = 'income:salary' THEN t.amount ELSE 0 END) AS salary,
               SUM(CASE WHEN t.category_key = 'housing:mortgage' THEN t.amount ELSE 0 END) AS mortgage,
               SUM(${SAVING_EXPR}) AS saving
        FROM transactions t JOIN accounts a ON a.id = t.account_id JOIN categories c ON c.key = t.category_key
@@ -378,6 +380,7 @@ export function averages(db: Database, p: Period): Averages {
     .get<
       {
         income: number | null;
+        salary: number | null;
         expense: number | null;
         mortgage: number | null;
         saving: number | null;
@@ -390,6 +393,7 @@ export function averages(db: Database, p: Period): Averages {
   return {
     months,
     income,
+    salary: (row.salary ?? 0) / months,
     expense,
     expenseExMortgage: expense - mortgage,
     mortgage,

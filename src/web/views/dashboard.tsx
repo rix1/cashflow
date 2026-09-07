@@ -41,9 +41,9 @@ export const Dashboard: FC<Props> = (
     row.expense += f.expense;
     row.saving += f.saving;
   }
-  const savingsRate = averages.income > 0
-    ? averages.net / averages.income
-    : null;
+  // Tiles use salary rather than all income so one-off inflows do not skew them.
+  const salaryNet = averages.salary + averages.expense;
+  const savingsRate = averages.salary > 0 ? salaryNet / averages.salary : null;
   const ownerQuery = owner ? `&owner=${encodeURIComponent(owner)}` : "";
   const gapsInPeriod = gaps.filter((g) =>
     g.to >= `${from}-01` && g.from <= `${to}-31`
@@ -105,8 +105,8 @@ export const Dashboard: FC<Props> = (
       )}
       <div class="tiles">
         <div class="tile">
-          <div class="label">Inntekt / mnd</div>
-          <div class="value pos">{nok(averages.income)}</div>
+          <div class="label">Lønn / mnd</div>
+          <div class="value pos">{nok(averages.salary)}</div>
           <div class="sub">snitt over {averages.months} mnd</div>
         </div>
         <div class="tile">
@@ -116,8 +116,8 @@ export const Dashboard: FC<Props> = (
         </div>
         <div class="tile">
           <div class="label">Netto / mnd</div>
-          <div class={`value ${averages.net >= 0 ? "pos" : "neg"}`}>
-            {nok(averages.net)}
+          <div class={`value ${salaryNet >= 0 ? "pos" : "neg"}`}>
+            {nok(salaryNet)}
           </div>
           <div class="sub">sparerate {pct(savingsRate)}</div>
         </div>

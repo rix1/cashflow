@@ -38,9 +38,9 @@ export const MortgagePage: FC<Props> = (
   const taxBack = newInterest * NORWEGIAN_INTEREST_DEDUCTION;
   const currentMortgage = -averages.mortgage;
   const delta = newPayment - currentMortgage;
-  const headroomNow = averages.income + averages.expenseExMortgage -
+  const headroomNow = averages.salary + averages.expenseExMortgage -
     currentMortgage;
-  const headroomNew = averages.income + averages.expenseExMortgage - newPayment;
+  const headroomNew = averages.salary + averages.expenseExMortgage - newPayment;
 
   const chart = {
     type: "bar",
@@ -105,7 +105,7 @@ export const MortgagePage: FC<Props> = (
           <div class={`value ${headroomNow >= 0 ? "pos" : "neg"}`}>
             {nok(headroomNow)}
           </div>
-          <div class="sub">inntekt − utgifter (siste 12 mnd, husholdning)</div>
+          <div class="sub">lønn − utgifter (siste 12 mnd, husholdning)</div>
         </div>
       </div>
 
@@ -182,7 +182,7 @@ export const MortgagePage: FC<Props> = (
               {nok(headroomNew)}
             </div>
             <div class="sub">
-              inntekt {nok(averages.income)} − andre utgifter{" "}
+              lønn {nok(averages.salary)} − andre utgifter{" "}
               {nok(-averages.expenseExMortgage)} − ny termin
             </div>
           </div>
@@ -202,7 +202,7 @@ export const MortgagePage: FC<Props> = (
                 <td class="num">{nok(s.payment)}</td>
                 <td class="num">
                   {nok(
-                    averages.income + averages.expenseExMortgage - s.payment,
+                    averages.salary + averages.expenseExMortgage - s.payment,
                   )}
                 </td>
               </tr>
