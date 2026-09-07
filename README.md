@@ -2,9 +2,9 @@
 
 Household finance overview built from CSV exports of Norwegian bank
 statements. Import the exports, let the categorizer sort them, and browse the
-result in a local web UI: monthly income and expenses, category grid,
-recurring fixed costs, mortgage interest vs principal, and a what-if calculator
-for a new loan.
+result in a local web UI: monthly income and expenses, category grid, merchant
+overview with trends and averages, subscriptions and other recurring costs,
+mortgage interest vs principal, and a what-if calculator for a new loan.
 
 Everything runs locally with Deno and SQLite. No data leaves your machine.
 
@@ -97,7 +97,10 @@ into stable merchant keys so rules stay short.
 
 **Web UI** (`src/web/`) is Hono with server-rendered JSX and htmx, no build
 step. Chart.js and htmx load from cdnjs unless copies exist in
-`src/web/static/` (`htmx.min.js`, `chart.umd.min.js`).
+`src/web/static/` (`htmx.min.js`, `chart.umd.min.js`). Merchant logos are
+favicons fetched once by the server from DuckDuckGo's icon service into
+`.cache/logos/` (gitignored) for merchants with a known domain, with an SVG
+monogram for the rest; pages themselves never call third parties.
 
 ## Privacy
 

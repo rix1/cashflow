@@ -75,10 +75,12 @@ Hono + server-rendered JSX + htmx, no build step. Deno Fresh was considered;
 the API layer is separate so a Fresh frontend can replace the views later if
 the UI grows interactive enough to want islands.
 
-Views: dashboard, category grid, fixed costs (recurring detection), mortgage
-(interest vs principal, what-if for the new loan), transactions (search, inline
-category edit), review queue (bulk tag by merchant, creates rules), rules,
-data quality (imports, gaps, reconciliation).
+Views: dashboard, category grid, vendors (searchable merchant overview with
+totals, weekly/monthly/yearly averages, sparkline trend and a detail page per
+merchant), fixed costs (recurring detection), mortgage (interest vs principal,
+what-if for the new loan), transactions (search, inline category edit), review
+queue (bulk tag by merchant, creates rules), rules, data quality (imports,
+gaps, reconciliation).
 
 ## Phase 4: later
 
@@ -100,6 +102,10 @@ Phases 0 to 3 are implemented and verified against the real exports:
   rule.
 - The data page flagged Siri's "Sparegris" savings account automatically; it
   is now in accounts.json.
+- 2026-09-05: vendor overview added (`/vendors`); the recurring page became a
+  subscription finder with search, type and cadence filters and merchant
+  logos; design brief written at docs/design-brief.md; Claude Design sync was
+  evaluated and skipped because the app has no component library to import.
 
 Known limitations / next steps:
 

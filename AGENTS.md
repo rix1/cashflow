@@ -61,7 +61,9 @@ src/categorize/mod.ts       categorizeAll(), seed sync, context loading
 src/cli/                    import and categorize commands
 src/web/server.tsx          Hono routes
 src/web/queries.ts          all SQL for the UI and JSON API
-src/web/views/*.tsx         server-rendered JSX pages
+src/web/stats.ts            trend, period averages, sparkline geometry
+src/web/logos.ts            merchant -> domain map, favicon cache, SVG monogram
+src/web/views/*.tsx         server-rendered JSX pages (vendors.tsx = merchant overview)
 src/web/static/             vendored htmx and Chart.js
 ```
 
@@ -125,6 +127,13 @@ src/web/static/             vendored htmx and Chart.js
 - Owner aliases in `accounts.json` drive transfer detection by name. Keep them
   in sync with how each bank renders names (uppercase variants, initials).
 - `jsx-key` lint is disabled on purpose: pages are server-rendered strings.
+- Logos: `/logo/:merchant` fetches favicons from icons.duckduckgo.com (the only
+  non-local host in the serve task's `--allow-net`) into `.cache/logos/`.
+  Unknown domains get a monogram; add domains to `KNOWN` in `logos.ts`.
+- The default shell is zsh: never use `path` as a shell variable name (it is
+  bound to `PATH`, and every later command fails with "command not found").
+  Headless Chrome screenshots work with `--timeout=6000`;
+  `--virtual-time-budget` hangs on Chart.js animations.
 
 ## Commit style
 
