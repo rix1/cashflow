@@ -163,7 +163,9 @@ export const Dashboard: FC<Props> = (
                   return (
                     <tr>
                       <td>
-                        <a href={`/transactions?month=${m}${ownerQuery}`}>
+                        <a
+                          href={`/transactions?from=${m}&to=${m}${ownerQuery}`}
+                        >
                           {monthLabel(m)}
                         </a>
                       </td>

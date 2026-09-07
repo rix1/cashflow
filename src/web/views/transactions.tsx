@@ -1,7 +1,18 @@
 import type { FC } from "hono/jsx";
 import { nok } from "../format.ts";
-import type { AccountRow, TxFilters, TxRow } from "../queries.ts";
-import { CategorySelect, OwnerSelect } from "./layout.tsx";
+import {
+  type AccountRow,
+  categoryOptions,
+  type TxFilters,
+  type TxRow,
+} from "../queries.ts";
+import { CategorySelect, MultiSelect } from "./layout.tsx";
+
+const DIRECTIONS: [string, string][] = [
+  ["", "alle"],
+  ["in", "inn"],
+  ["out", "ut"],
+];
 
 export const SourceBadge: FC<{ source: string | null }> = ({ source }) => {
   if (!source || source === "none") {
@@ -93,9 +104,12 @@ export const TransactionsPage: FC<Props> = (
     const params = new URLSearchParams();
     for (const [k, v] of Object.entries(filters)) {
       if (
-        v !== undefined && v !== "" && v !== false && k !== "page" &&
-        k !== "pageSize"
-      ) params.set(k, String(v));
+        v === undefined || v === "" || v === false || k === "page" ||
+        k === "pageSize"
+      ) continue;
+      for (const item of Array.isArray(v) ? v : [v]) {
+        params.append(k, String(item));
+      }
     }
     params.set("page", String(p));
     return `/transactions?${params}`;
@@ -113,34 +127,58 @@ export const TransactionsPage: FC<Props> = (
             placeholder="mottaker, tekst, melding"
           />
         </label>
-        <label>
-          Kategori
-          <CategorySelect
-            name="category"
-            value={filters.category}
-            includeEmpty
-            class=""
-          />
-        </label>
-        <label>
-          Hvem
-          <OwnerSelect owners={owners} value={filters.owner} />
-        </label>
-        <label>
-          Konto
-          <select name="account">
-            <option value="">alle</option>
-            {accounts.filter((a) => a.tx_count > 0).map((a) => (
-              <option value={String(a.id)} selected={filters.account === a.id}>
-                {a.owner} · {a.bank} · {a.name}
-              </option>
+        <div class="field">
+          <span>Retning</span>
+          <div class="segmented">
+            {DIRECTIONS.map(([value, label]) => (
+              <label>
+                <input
+                  type="radio"
+                  name="direction"
+                  value={value}
+                  checked={(filters.direction ?? "") === value}
+                />
+                <span>{label}</span>
+              </label>
             ))}
-          </select>
-        </label>
-        <label>
-          Måned
-          <input type="month" name="month" value={filters.month ?? ""} />
-        </label>
+          </div>
+        </div>
+        <div class="field">
+          <span>Kategori</span>
+          <MultiSelect
+            name="category"
+            groups={categoryOptions().map((g) => ({
+              label: g.group,
+              options: g.categories.map((c) => ({
+                value: c.key,
+                label: c.name,
+              })),
+            }))}
+            selected={filters.category}
+          />
+        </div>
+        <div class="field">
+          <span>Hvem</span>
+          <MultiSelect
+            name="owner"
+            groups={[{ options: owners.map((o) => ({ value: o, label: o })) }]}
+            selected={filters.owner}
+            emptyLabel="husholdning"
+          />
+        </div>
+        <div class="field">
+          <span>Konto</span>
+          <MultiSelect
+            name="account"
+            groups={[{
+              options: accounts.filter((a) => a.tx_count > 0).map((a) => ({
+                value: String(a.id),
+                label: `${a.owner} · ${a.bank} · ${a.name}`,
+              })),
+            }]}
+            selected={filters.account?.map(String)}
+          />
+        </div>
         <label>
           Fra
           <input type="month" name="from" value={filters.from ?? ""} />

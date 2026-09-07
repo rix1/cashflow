@@ -162,7 +162,7 @@ export function createApp(dbPath?: string) {
     }
     const { rows, total } = q.listTransactions(db, {
       merchant,
-      owner: p.owner,
+      owner: p.owner ? [p.owner] : undefined,
       from: p.from,
       to: p.to,
       pageSize: 50,
@@ -243,23 +243,40 @@ export function createApp(dbPath?: string) {
   });
 
   const txFilters = (
-    c: { req: { query: (k: string) => string | undefined } },
-  ): q.TxFilters => ({
-    q: c.req.query("q") || undefined,
-    category: c.req.query("category") || undefined,
-    group: c.req.query("group") || undefined,
-    owner: c.req.query("owner") || undefined,
-    account: c.req.query("account")
-      ? Number(c.req.query("account"))
-      : undefined,
-    month: isMonth(c.req.query("month")) ? c.req.query("month") : undefined,
-    from: c.req.query("from") || undefined,
-    to: c.req.query("to") || undefined,
-    uncategorized: c.req.query("uncategorized") === "1",
-    merchant: c.req.query("merchant") || undefined,
-    page: Math.max(1, Number(c.req.query("page") || 1)),
-    pageSize: 200,
-  });
+    c: {
+      req: {
+        query: (k: string) => string | undefined;
+        queries: (k: string) => string[] | undefined;
+      };
+    },
+  ): q.TxFilters => {
+    const one = (k: string) => c.req.query(k) || undefined;
+    const many = (k: string) => {
+      const values = (c.req.queries(k) ?? []).filter(Boolean);
+      return values.length ? values : undefined;
+    };
+    // Older links pass a single ?month=; read it as from = to = that month.
+    const month = isMonth(c.req.query("month"))
+      ? c.req.query("month")
+      : undefined;
+    const direction = c.req.query("direction");
+    return {
+      q: one("q"),
+      category: many("category"),
+      group: one("group"),
+      owner: many("owner"),
+      account: many("account")?.map(Number).filter(Number.isInteger),
+      from: one("from") ?? month,
+      to: one("to") ?? month,
+      direction: direction === "in" || direction === "out"
+        ? direction
+        : undefined,
+      uncategorized: c.req.query("uncategorized") === "1",
+      merchant: one("merchant"),
+      page: Math.max(1, Number(c.req.query("page") || 1)),
+      pageSize: 200,
+    };
+  };
 
   app.get("/transactions", (c) => {
     const filters = txFilters(c);

@@ -272,7 +272,7 @@ export const MortgagePage: FC<Props> = (
                 <tr>
                   <td>
                     <a
-                      href={`/transactions?category=housing%3Amortgage&month=${m.month}`}
+                      href={`/transactions?category=housing%3Amortgage&from=${m.month}&to=${m.month}`}
                     >
                       {monthLabel(m.month)}
                     </a>

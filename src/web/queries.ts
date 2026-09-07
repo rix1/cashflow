@@ -135,15 +135,22 @@ export function categoryTotals(db: Database, p: Period): CategoryTotal[] {
     .all<CategoryTotal>(w.params);
 }
 
+export type TxDirection = "in" | "out";
+
 export type TxFilters = {
   q?: string;
-  category?: string;
+  /** Any of these category keys (empty or missing = all). */
+  category?: string[];
   group?: string;
-  owner?: string;
-  account?: number;
-  month?: string;
+  /** Any of these owners (empty or missing = whole household). */
+  owner?: string[];
+  /** Any of these account ids (empty or missing = all). */
+  account?: number[];
+  /** Month bounds, inclusive: "YYYY-MM" or a full date. */
   from?: string;
   to?: string;
+  /** "in" = positive amounts, "out" = negative amounts. */
+  direction?: TxDirection;
   uncategorized?: boolean;
   merchant?: string;
   page?: number;
@@ -179,32 +186,33 @@ export function listTransactions(
 ): { rows: TxRow[]; total: number; sum: number } {
   const where: string[] = ["1 = 1"];
   const params: Record<string, string | number> = {};
+  /** `column IN (...)` with one named parameter per value. */
+  const anyOf = (
+    column: string,
+    prefix: string,
+    values: (string | number)[],
+  ) => {
+    const names = values.map((v, i) => {
+      params[`${prefix}${i}`] = v;
+      return `:${prefix}${i}`;
+    });
+    where.push(`${column} IN (${names.join(", ")})`);
+  };
   if (f.q) {
     where.push(
       `(t.merchant LIKE :q OR t.description LIKE :q OR IFNULL(t.counterparty, '') LIKE :q OR IFNULL(t.message, '') LIKE :q)`,
     );
     params.q = `%${f.q}%`;
   }
-  if (f.category) {
-    where.push(`t.category_key = :category`);
-    params.category = f.category;
-  }
+  if (f.category?.length) anyOf("t.category_key", "cat", f.category);
   if (f.group) {
     where.push(`c.group_name = :grp`);
     params.grp = f.group;
   }
-  if (f.owner) {
-    where.push(`a.owner = :owner`);
-    params.owner = f.owner;
-  }
-  if (f.account) {
-    where.push(`t.account_id = :account`);
-    params.account = f.account;
-  }
-  if (f.month) {
-    where.push(`substr(t.date, 1, 7) = :month`);
-    params.month = f.month;
-  }
+  if (f.owner?.length) anyOf("a.owner", "owner", f.owner);
+  if (f.account?.length) anyOf("t.account_id", "acct", f.account);
+  if (f.direction === "in") where.push(`t.amount > 0`);
+  if (f.direction === "out") where.push(`t.amount < 0`);
   if (f.from) {
     where.push(`t.date >= :from`);
     params.from = f.from.length === 7 ? `${f.from}-01` : f.from;

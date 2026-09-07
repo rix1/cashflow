@@ -126,7 +126,7 @@ export const CategoriesPage: FC<Props> = (
                                   class="cell"
                                   href={`/transactions?category=${
                                     encodeURIComponent(c.key)
-                                  }&month=${m}${ownerQuery}`}
+                                  }&from=${m}&to=${m}${ownerQuery}`}
                                 >
                                   {nok(v)}
                                 </a>

@@ -34,7 +34,15 @@ th, td { padding:6px 8px; border-bottom:1px solid var(--line); text-align:left; 
 td.num, th.num { text-align:right; font-variant-numeric:tabular-nums; white-space:nowrap } tr:last-child td { border-bottom:none } tr.subtotal td { background:var(--soft); font-weight:600 }
 tr.group-head td { background:#f7f6f2; font-weight:700; color:var(--accent) } .tablewrap { overflow-x:auto }
 a { color:var(--accent) } a.cell { color:inherit; text-decoration:none; display:block } a.cell:hover { text-decoration:underline }
-form.filters { display:flex; flex-wrap:wrap; gap:8px 12px; align-items:end; margin:8px 0 14px } form.filters label { display:flex; flex-direction:column; font-size:12px; color:var(--muted); gap:3px }
+form.filters { display:flex; flex-wrap:wrap; gap:8px 12px; align-items:end; margin:8px 0 14px } form.filters label, form.filters .field { display:flex; flex-direction:column; font-size:12px; color:var(--muted); gap:3px }
+.segmented { display:inline-flex; border:1px solid var(--line); border-radius:6px; overflow:hidden; background:#fff } form.filters .segmented label { flex-direction:row; gap:0; cursor:pointer; position:relative }
+.segmented input { position:absolute; opacity:0; width:0; height:0 } .segmented span { padding:5px 10px; font-size:13px; color:var(--muted); border-right:1px solid var(--line) } .segmented label:last-child span { border-right:none }
+.segmented input:checked + span { background:var(--accent); color:#fff } .segmented input:focus-visible + span { outline:2px solid var(--accent); outline-offset:-2px }
+details.multi { position:relative } details.multi summary { position:relative; list-style:none; cursor:pointer; padding:5px 26px 5px 8px; border:1px solid var(--line); border-radius:6px; background:#fff; color:var(--fg); font-size:14px; min-width:140px; max-width:240px; white-space:nowrap; overflow:hidden; text-overflow:ellipsis }
+details.multi summary::-webkit-details-marker { display:none } details.multi summary::after { content:"▾"; position:absolute; right:8px; top:5px; color:var(--muted) }
+.multi-menu { position:absolute; top:calc(100% + 4px); left:0; z-index:10; min-width:240px; max-height:320px; overflow:auto; background:#fff; border:1px solid var(--line); border-radius:8px; box-shadow:0 6px 20px rgba(0,0,0,.08); padding:6px 0 }
+.multi-group { padding:8px 10px 2px; font-size:11px; text-transform:uppercase; letter-spacing:.04em; color:var(--muted) } form.filters .multi-menu label { flex-direction:row; align-items:center; gap:8px; padding:4px 10px; color:var(--fg); font-size:13px; cursor:pointer; white-space:nowrap }
+.multi-menu label:hover { background:var(--soft) } .multi-menu input { margin:0 }
 input, select, button { font:inherit; padding:5px 8px; border:1px solid var(--line); border-radius:6px; background:#fff } input[type=month] { min-width:130px }
 button, .btn { cursor:pointer; background:var(--accent); color:#fff; border-color:var(--accent) } button.secondary { background:#fff; color:var(--fg); border-color:var(--line) } button.danger { background:#fff; color:var(--neg); border-color:var(--line) }
 .badge { display:inline-block; font-size:11px; padding:1px 6px; border-radius:10px; background:var(--soft); color:var(--muted) } .badge.manual { background:#e8f0fb; color:var(--accent) } .badge.transfer { background:#eef7f0; color:var(--pos) } .badge.none { background:#fbeeea; color:var(--neg) }
@@ -71,6 +79,7 @@ export const Layout: FC<
         </nav>
       </header>
       <main>{children}</main>
+      <script dangerouslySetInnerHTML={{ __html: MULTI_SCRIPT }} />
     </body>
   </html>
 );
@@ -124,6 +133,63 @@ export const OwnerSelect: FC<
     ))}
   </select>
 );
+
+export type MultiOption = { value: string; label: string };
+export type MultiGroup = { label?: string; options: MultiOption[] };
+
+/**
+ * Checkbox dropdown that submits one `name=value` per checked option.
+ * Nothing checked means "no filter", which the summary text mirrors.
+ * MULTI_SCRIPT keeps the summary in sync and closes the menu on outside click.
+ */
+export const MultiSelect: FC<
+  {
+    name: string;
+    groups: MultiGroup[];
+    selected?: string[];
+    emptyLabel?: string;
+  }
+> = ({ name, groups, selected = [], emptyLabel = "alle" }) => {
+  const chosen = groups
+    .flatMap((g) => g.options)
+    .filter((o) => selected.includes(o.value));
+  const summary = chosen.length === 0
+    ? emptyLabel
+    : chosen.length <= 2
+    ? chosen.map((o) => o.label).join(", ")
+    : `${chosen.length} valgt`;
+  return (
+    <details class="multi" data-empty={emptyLabel}>
+      <summary title={chosen.map((o) => o.label).join(", ")}>{summary}</summary>
+      <div class="multi-menu">
+        {groups.map((g) => (
+          <>
+            {g.label ? <div class="multi-group">{g.label}</div> : null}
+            {g.options.map((o) => (
+              <label>
+                <input
+                  type="checkbox"
+                  name={name}
+                  value={o.value}
+                  checked={selected.includes(o.value)}
+                />
+                {o.label}
+              </label>
+            ))}
+          </>
+        ))}
+      </div>
+    </details>
+  );
+};
+
+const MULTI_SCRIPT = `(function(){
+function label(d){var c=d.querySelectorAll('input:checked');if(!c.length)return d.dataset.empty||'alle';
+if(c.length<=2)return Array.prototype.map.call(c,function(i){return i.parentElement.textContent.trim()}).join(', ');
+return c.length+' valgt'}
+document.addEventListener('change',function(e){var d=e.target.closest&&e.target.closest('details.multi');if(d)d.querySelector('summary').textContent=label(d)});
+document.addEventListener('click',function(e){document.querySelectorAll('details.multi[open]').forEach(function(d){if(!d.contains(e.target))d.removeAttribute('open')})});
+})();`;
 
 export const PeriodFilters: FC<
   { from: string; to: string; owner?: string; owners: string[]; action: string }
