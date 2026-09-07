@@ -3,8 +3,8 @@
     "import": "deno run --allow-read --allow-write=. --allow-ffi --allow-env src/main.ts import",
     "rebuild": "deno run --allow-read --allow-write=. --allow-ffi --allow-env src/main.ts rebuild",
     "categorize": "deno run --allow-read --allow-write=. --allow-ffi --allow-env src/main.ts categorize",
-    "serve": "deno run --allow-read --allow-write=. --allow-ffi --allow-env --allow-net=127.0.0.1 src/main.ts serve",
-    "dev": "deno run --watch --allow-read --allow-write=. --allow-ffi --allow-env --allow-net=127.0.0.1 src/main.ts serve",
+    "serve": "deno run --allow-read --allow-write=. --allow-ffi --allow-env --allow-net=127.0.0.1,icons.duckduckgo.com src/main.ts serve",
+    "dev": "deno run --watch --allow-read --allow-write=. --allow-ffi --allow-env --allow-net=127.0.0.1,icons.duckduckgo.com src/main.ts serve",
     "test": "deno test --allow-read --allow-write=. --allow-ffi --allow-env",
     "check": "deno check src/main.ts && deno lint && deno fmt --check",
     "lexer": "deno run --watch --allow-read src/lexer/lexer.debug.ts"

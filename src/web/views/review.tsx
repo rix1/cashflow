@@ -46,9 +46,7 @@ export const ReviewPage: FC<Props> = ({ groups, stats, owner, owners }) => (
             <tr>
               <td>
                 <a
-                  href={`/transactions?merchant=${
-                    encodeURIComponent(g.merchant)
-                  }`}
+                  href={`/vendors/${encodeURIComponent(g.merchant)}`}
                 >
                   {g.merchant}
                 </a>

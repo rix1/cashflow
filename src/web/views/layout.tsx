@@ -8,7 +8,8 @@ export type Assets = { htmx: string; chart: string };
 const NAV: [string, string][] = [
   ["/", "Oversikt"],
   ["/categories", "Kategorier"],
-  ["/fixed", "Faste kostnader"],
+  ["/vendors", "Mottakere"],
+  ["/fixed", "Abonnementer"],
   ["/mortgage", "Boliglån"],
   ["/transactions", "Transaksjoner"],
   ["/review", "Gjennomgang"],
@@ -42,6 +43,8 @@ details summary { cursor:pointer; color:var(--muted) } .desc { max-width:360px }
 .inline-form { display:inline-flex; gap:6px; align-items:center } .callout { border-left:3px solid var(--warn); background:#fff8ec; padding:8px 12px; border-radius:6px; margin:10px 0 }
 .pager { display:flex; gap:10px; margin:10px 0 } .grid2 { display:grid; grid-template-columns:1fr 1fr; gap:16px } @media (max-width:900px) { .grid2 { grid-template-columns:1fr } }
 select.cat { max-width:220px; font-size:12px; padding:3px 4px }
+svg.spark { display:block; color:#8c7851 }
+img.logo { border-radius:5px; vertical-align:-5px; margin-right:6px; background:var(--soft); object-fit:contain }
 `;
 
 export const Layout: FC<

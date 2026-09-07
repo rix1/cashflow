@@ -8,7 +8,7 @@ import {
   detectRecurring,
   type RecurringItem,
 } from "../categorize/recurring.ts";
-import { addMonths } from "./format.ts";
+import { addMonths, monthsBetween } from "./format.ts";
 
 export type Period = { from: string; to: string; owner?: string };
 
@@ -294,15 +294,62 @@ export function uncategorizedStats(
     .get<{ count: number; sum: number; merchants: number }>()!;
 }
 
+export type RecurringFilter = {
+  owner?: string;
+  q?: string;
+  cadence?: string;
+  kind?: "all" | "subscriptions" | "bills" | "other";
+  includeInactive?: boolean;
+};
+
+const SUBSCRIPTION_CATEGORIES = new Set(["subscriptions", "membership"]);
+const BILL_CATEGORIES = new Set([
+  "housing:mortgage",
+  "housing:fees",
+  "housing:electricity",
+  "housing:other",
+  "insurance",
+  "loans:student",
+  "loans:other",
+  "donations",
+  "fees",
+  "taxes",
+]);
+
 export function recurringItems(
   db: Database,
-  opts: { owner?: string } = {},
+  opts: RecurringFilter = {},
 ): RecurringItem[] {
+  const items = recurringItemsRaw(db, opts.owner);
+  const q = opts.q?.toLowerCase();
+  return items.filter((i) => {
+    if (!opts.includeInactive && !i.active) return false;
+    if (q && !i.merchant.toLowerCase().includes(q)) return false;
+    if (opts.cadence && opts.cadence !== "all" && i.cadence !== opts.cadence) {
+      return false;
+    }
+    if (
+      opts.kind === "subscriptions" &&
+      !SUBSCRIPTION_CATEGORIES.has(i.category_key)
+    ) return false;
+    if (opts.kind === "bills" && !BILL_CATEGORIES.has(i.category_key)) {
+      return false;
+    }
+    if (
+      opts.kind === "other" &&
+      (SUBSCRIPTION_CATEGORIES.has(i.category_key) ||
+        BILL_CATEGORIES.has(i.category_key))
+    ) return false;
+    return true;
+  });
+}
+
+function recurringItemsRaw(db: Database, owner?: string): RecurringItem[] {
   const params: Record<string, string> = {};
   let ownerSql = "";
-  if (opts.owner) {
+  if (owner) {
     ownerSql = `AND a.owner = :owner`;
-    params.owner = opts.owner;
+    params.owner = owner;
   }
   const rows = db
     .prepare(
@@ -582,4 +629,136 @@ export function categoryOptions() {
     group,
     categories: CATEGORIES.filter((c) => c.group === group),
   }));
+}
+
+export type VendorRow = {
+  merchant: string;
+  category_key: string;
+  owners: string[];
+  count: number;
+  sum: number;
+  first: string;
+  last: string;
+  monthly: number[];
+};
+
+type VendorCell = {
+  merchant: string;
+  month: string;
+  category_key: string;
+  owner: string;
+  sum: number;
+  count: number;
+  first: string;
+  last: string;
+};
+
+/** Merchants in a period with per-month series, excluding transfers and savings moves. */
+export function vendorList(
+  db: Database,
+  p: Period & {
+    q?: string;
+    limit?: number;
+    kind?: "expense" | "income" | "all";
+  },
+): { rows: VendorRow[]; total: number; months: string[] } {
+  const w = periodWhere(p);
+  const params: Record<string, string> = { ...w.params };
+  let extra = "";
+  if (p.q) {
+    extra += ` AND (t.merchant LIKE :q OR t.description LIKE :q)`;
+    params.q = `%${p.q}%`;
+  }
+  if (p.kind === "expense") extra += ` AND t.amount < 0`;
+  if (p.kind === "income") extra += ` AND t.amount > 0`;
+  const cells = db
+    .prepare(
+      `SELECT t.merchant, substr(t.date, 1, 7) AS month, t.category_key, a.owner, SUM(t.amount) AS sum, COUNT(*) AS count, MIN(t.date) AS first, MAX(t.date) AS last
+       FROM transactions t JOIN accounts a ON a.id = t.account_id JOIN categories c ON c.key = t.category_key
+       WHERE ${w.sql} AND c.kind NOT IN ('transfer', 'saving') ${extra}
+       GROUP BY 1, 2, 3, 4`,
+    )
+    .all<VendorCell>(params);
+  const months = monthsBetween(p.from, p.to);
+  const index = new Map(months.map((m, i) => [m, i]));
+  const byMerchant = new Map<
+    string,
+    VendorRow & { categoryCounts: Map<string, number> }
+  >();
+  for (const cell of cells) {
+    let row = byMerchant.get(cell.merchant);
+    if (!row) {
+      row = {
+        merchant: cell.merchant,
+        category_key: cell.category_key,
+        owners: [],
+        count: 0,
+        sum: 0,
+        first: cell.first,
+        last: cell.last,
+        monthly: months.map(() => 0),
+        categoryCounts: new Map(),
+      };
+      byMerchant.set(cell.merchant, row);
+    }
+    row.count += cell.count;
+    row.sum += cell.sum;
+    if (cell.first < row.first) row.first = cell.first;
+    if (cell.last > row.last) row.last = cell.last;
+    if (!row.owners.includes(cell.owner)) row.owners.push(cell.owner);
+    row.categoryCounts.set(
+      cell.category_key,
+      (row.categoryCounts.get(cell.category_key) ?? 0) + cell.count,
+    );
+    const i = index.get(cell.month);
+    if (i !== undefined) row.monthly[i] += cell.sum;
+  }
+  const rows = [...byMerchant.values()]
+    .map((r) => {
+      const category_key = [...r.categoryCounts.entries()].sort((a, b) =>
+        b[1] - a[1]
+      )[0][0];
+      const { categoryCounts: _c, ...rest } = r;
+      return { ...rest, category_key, owners: r.owners.sort() };
+    })
+    .sort((a, b) => Math.abs(b.sum) - Math.abs(a.sum));
+  return { rows: rows.slice(0, p.limit ?? 100), total: rows.length, months };
+}
+
+export type VendorDetail = VendorRow & {
+  yearly: { year: string; sum: number; count: number }[];
+  categories: { category_key: string; count: number }[];
+};
+
+export function vendorDetail(
+  db: Database,
+  merchant: string,
+  p: Period,
+): VendorDetail | null {
+  const { rows } = vendorList(db, { ...p, limit: 1_000_000 });
+  const row = rows.find((r) => r.merchant === merchant);
+  if (!row) return null;
+  const w = periodWhere(p);
+  const params = { ...w.params, merchant };
+  const ownerSql = p.owner ? " AND a.owner = :owner" : "";
+  const yearly = db
+    .prepare(
+      `SELECT substr(t.date, 1, 4) AS year, SUM(t.amount) AS sum, COUNT(*) AS count
+       FROM transactions t JOIN accounts a ON a.id = t.account_id WHERE ${w.sql}${ownerSql} AND t.merchant = :merchant GROUP BY 1 ORDER BY 1`,
+    )
+    .all<{ year: string; sum: number; count: number }>(params);
+  const categories = db
+    .prepare(
+      `SELECT t.category_key, COUNT(*) AS count FROM transactions t JOIN accounts a ON a.id = t.account_id
+       WHERE ${w.sql}${ownerSql} AND t.merchant = :merchant GROUP BY 1 ORDER BY 2 DESC`,
+    )
+    .all<{ category_key: string; count: number }>(params);
+  return { ...row, yearly, categories };
+}
+
+/** Whole data range as months, for pages that default to "all time". */
+export function fullPeriod(db: Database): { from: string; to: string } {
+  const { min, max } = getDateBounds(db);
+  const now = new Date().toISOString().slice(0, 7);
+  return { from: (min ?? now).slice(0, 7), to: (max ?? now).slice(0, 7) };
 }

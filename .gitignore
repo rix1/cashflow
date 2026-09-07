@@ -9,3 +9,5 @@ out/*
 accounts.json
 .env
 .DS_Store
+docs/design/current-ui/
+.cache/

@@ -20,6 +20,8 @@ import { TransactionsPage, TxTableRow } from "./views/transactions.tsx";
 import { ReviewPage } from "./views/review.tsx";
 import { RulesPage } from "./views/rules.tsx";
 import { DataPage } from "./views/data.tsx";
+import { VendorPage, VendorsPage } from "./views/vendors.tsx";
+import { logoFor } from "./logos.ts";
 
 const STATIC_DIR = new URL("./static/", import.meta.url);
 
@@ -105,18 +107,113 @@ export function createApp(dbPath?: string) {
     );
   });
 
-  app.get("/fixed", (c) => {
+  const fullPeriodOf = (
+    c: { req: { query: (k: string) => string | undefined } },
+  ) => {
+    const d = q.fullPeriod(db);
+    const from = isMonth(c.req.query("from")) ? c.req.query("from")! : d.from;
+    const to = isMonth(c.req.query("to")) ? c.req.query("to")! : d.to;
     const owner = c.req.query("owner") || undefined;
+    return { from: from <= to ? from : to, to: from <= to ? to : from, owner };
+  };
+
+  app.get("/vendors", (c) => {
+    const p = fullPeriodOf(c);
+    const qText = c.req.query("q")?.trim() || "";
+    const kindParam = c.req.query("kind") ?? "";
+    const kind = (["expense", "income", "all"].includes(kindParam)
+      ? kindParam
+      : "expense") as "expense" | "income" | "all";
+    const { rows, total, months } = q.vendorList(db, {
+      ...p,
+      q: qText || undefined,
+      kind,
+      limit: 150,
+    });
     return c.html(
-      <Layout title="Faste kostnader" active="/fixed" assets={assets}>
-        <FixedPage
-          items={q.recurringItems(db, { owner })}
-          owner={owner}
+      <Layout title="Mottakere" active="/vendors" assets={assets}>
+        <VendorsPage
+          rows={rows}
+          total={total}
+          months={months}
+          {...p}
           owners={q.getOwners(db)}
-          showInactive={c.req.query("inactive") === "1"}
+          q={qText}
+          kind={kind}
         />
       </Layout>,
     );
+  });
+
+  app.get("/vendors/:merchant", (c) => {
+    const p = fullPeriodOf(c);
+    const merchant = decodeURIComponent(c.req.param("merchant"));
+    const vendor = q.vendorDetail(db, merchant, p);
+    if (!vendor) {
+      return c.html(
+        <Layout title="Mottaker" active="/vendors" assets={assets}>
+          <h1>{merchant}</h1>
+          <p class="muted">
+            Ingen transaksjoner i perioden. <a href="/vendors">Tilbake</a>
+          </p>
+        </Layout>,
+        404,
+      );
+    }
+    const { rows, total } = q.listTransactions(db, {
+      merchant,
+      owner: p.owner,
+      from: p.from,
+      to: p.to,
+      pageSize: 50,
+    });
+    return c.html(
+      <Layout title={merchant} active="/vendors" assets={assets}>
+        <VendorPage
+          vendor={vendor}
+          months={q.vendorList(db, { ...p, limit: 0 }).months}
+          {...p}
+          transactions={rows}
+          txTotal={total}
+        />
+      </Layout>,
+    );
+  });
+
+  app.get("/fixed", (c) => {
+    const kindParam = c.req.query("kind") ?? "all";
+    const filter: q.RecurringFilter = {
+      owner: c.req.query("owner") || undefined,
+      q: c.req.query("q")?.trim() || undefined,
+      cadence: c.req.query("cadence") || undefined,
+      kind: (["all", "subscriptions", "bills", "other"].includes(kindParam)
+        ? kindParam
+        : "all") as q.RecurringFilter["kind"],
+      includeInactive: c.req.query("inactive") === "1",
+    };
+    return c.html(
+      <Layout title="Faste kostnader" active="/fixed" assets={assets}>
+        <FixedPage
+          items={q.recurringItems(db, filter)}
+          filter={filter}
+          owners={q.getOwners(db)}
+        />
+      </Layout>,
+    );
+  });
+
+  app.get("/logo/:merchant", async (c) => {
+    const merchant = decodeURIComponent(c.req.param("merchant"));
+    const logo = await logoFor(merchant);
+    return new Response(logo.body as BodyInit, {
+      status: 200,
+      headers: {
+        "content-type": logo.contentType,
+        "cache-control": logo.cache
+          ? "public, max-age=604800"
+          : "public, max-age=86400",
+      },
+    });
   });
 
   app.get("/mortgage", (c) => {

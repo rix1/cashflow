@@ -24,7 +24,7 @@ export const TxTableRow: FC<{ tx: TxRow }> = ({ tx }) => (
       {tx.owner} · {tx.bank}
     </td>
     <td class="desc">
-      <a href={`/transactions?merchant=${encodeURIComponent(tx.merchant)}`}>
+      <a href={`/vendors/${encodeURIComponent(tx.merchant)}`}>
         {tx.merchant}
       </a>
       <details>
