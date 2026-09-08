@@ -1,5 +1,33 @@
 # Design brief: Cashflow UI
 
+## Implementation revision · 2026-09-08
+
+Reviewed against `6b01f7f`, including the salary-based dashboard change
+(`2ef657a`), merchant overview (`8869d23`) and transaction filters (`6b01f7f`).
+The visual constraints below still apply. `DESIGN.md` records the chosen system.
+
+- Dashboard headline: salary minus expenses per month. Label it explicitly;
+  the monthly chart and table still show all income and actual net cash flow.
+- Include **Mottakere** (`/vendors`) and merchant detail pages: logos, period
+  averages, sparklines, trends and their transaction tables are established UI.
+- `/fixed` is **Abonnementer** in navigation and also covers other recurring
+  costs. Preserve search, kind, cadence and inactive filters.
+- Transactions use an all/in/out direction control and checkbox multi-selects
+  for category, owner and account. Preserve repeated query parameters, keyboard
+  operation and `from`/`to` dates. Do not reintroduce a separate month filter.
+- In-progress work in the main worktree distinguishes actual subscription
+  spending over 12 months from cadence estimates, and refines mortgage input
+  steps. Keep those calculations and inputs owned by that work; shared styles
+  must accommodate their additional labels and subtotal rows.
+- Chart.js and htmx are already vendored. Add no remote fonts or dependencies.
+  Existing logo requests remain as documented in the README.
+- Use synthetic data for implementation proofs, screenshots and interaction
+  checks. Do not copy or modify the main worktree's private database.
+
+Implementation sequence: record the system; apply shared CSS/navigation and
+chart defaults; prove dashboard and transaction interactions; finish dense-grid,
+review and mortgage details; verify all routes at laptop and phone widths.
+
 You are designing the visual language for **Cashflow**, a local, private
 household-finance tool used by two partners a few times a year and in bursts
 around big decisions (right now: sizing a larger mortgage for a new
@@ -48,6 +76,7 @@ Time box: one to two days. Decisions over polish.
 | ----------------------- | ------------------------------------------------------------------- | -------------------------------------------------------- |
 | Oversikt (dashboard)    | Monthly income vs expenses, net, savings rate, top categories, gaps | KPI tiles, one bar+line chart, two tables                |
 | Kategorier              | Category x month grid, 12+ month columns                            | Very dense table with group subtotals, horizontal scroll |
+| Mottakere               | Merchant totals, period averages, trends and drill-down              | Dense table, logos, sparklines, detail chart             |
 | Faste kostnader         | Recurring payments, monthly equivalent, active/inactive             | Table with tiles on top                                  |
 | Boliglån                | Interest vs principal per term, what-if form for a new loan         | Form + result tiles + stacked bar chart + tables         |
 | Transaksjoner           | 200-row table, filters, inline category select per row (htmx)       | The workhorse; controls inside table rows                |

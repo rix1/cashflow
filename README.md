@@ -6,7 +6,8 @@ result in a local web UI: monthly income and expenses, category grid, merchant
 overview with trends and averages, subscriptions and other recurring costs,
 mortgage interest vs principal, and a what-if calculator for a new loan.
 
-Everything runs locally with Deno and SQLite. No data leaves your machine.
+Transactions stay local in Deno and SQLite. Known merchant logos use a cached
+favicon service; see the web UI and privacy notes below.
 
 ## Direction
 
@@ -20,6 +21,8 @@ loan leave us per month" have a page.
   status.
 - `AGENTS.md` has conventions and invariants for anyone (human or AI) changing
   the code.
+- `DESIGN.md` defines the visual system. `docs/design-brief.md` records its
+  scope and the revision against the latest UI changes.
 
 ## Quick start
 
@@ -117,6 +120,10 @@ step. Chart.js and htmx load from cdnjs unless copies exist in
 favicons fetched once by the server from DuckDuckGo's icon service into
 `.cache/logos/` (gitignored) for merchants with a known domain, with an SVG
 monogram for the rest; pages themselves never call third parties.
+
+Transaction filters combine direction (all/in/out), multiple categories,
+owners and accounts, and a from/to period. Dashboard headline figures and
+mortgage headroom use salary; the monthly cash-flow chart includes all income.
 
 ## Privacy
 

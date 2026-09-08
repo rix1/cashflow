@@ -1,5 +1,15 @@
 # Design handoff
 
+Implementation started 2026-09-08 in a leased Treehouse worktree on
+`web/design-system`, based on `6b01f7f`. The brief has been reconciled with
+merchant pages, salary-based summaries and multi-select transaction filters.
+
+- `../../DESIGN.md`: chosen Paper ledger system and implementation checklist.
+- `research.md`: six reference notes and the alternative direction.
+- The dashboard and transactions page serve as the implemented proof frames.
+  Use synthetic data for new screenshots; the older `current-ui/` images are
+  private and must not be copied into deliverables.
+
 Inputs for the UI/UX pass, meant to be dropped into a Claude Design project
 or handed to a designer as-is.
 
