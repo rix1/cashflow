@@ -83,8 +83,9 @@ export function loadContext(
     .filter((r): r is CompiledRule => r !== null);
   const overrides = new Map<string, string>();
   for (
-    const o of db.prepare(`SELECT fingerprint, category_key FROM overrides`)
-      .all<{ fingerprint: string; category_key: string }>()
+    const o of db.prepare(
+      `SELECT fingerprint, category_key FROM overrides WHERE category_key IS NOT NULL`,
+    ).all<{ fingerprint: string; category_key: string }>()
   ) {
     overrides.set(o.fingerprint, o.category_key);
   }

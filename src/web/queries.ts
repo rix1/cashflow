@@ -610,26 +610,85 @@ export function deleteRule(db: Database, id: number) {
   db.exec(`DELETE FROM rules WHERE id = :id AND source = 'user'`, { id });
 }
 
+export type OverridePatch = {
+  category_key?: string | null;
+  reimburses?: string | null;
+  one_off?: boolean;
+  note?: string | null;
+};
+
+export type OverrideRow = {
+  category_key: string | null;
+  reimburses: string | null;
+  one_off: number;
+  note: string | null;
+};
+
+export function getOverride(
+  db: Database,
+  fingerprint: string,
+): OverrideRow | undefined {
+  return db
+    .prepare(
+      `SELECT category_key, reimburses, one_off, note FROM overrides WHERE fingerprint = :fp`,
+    )
+    .get<OverrideRow>({ fp: fingerprint });
+}
+
+/**
+ * Merges a patch into the manual decisions for one transaction. Fields left
+ * out of the patch keep their value; the row is dropped once it holds
+ * nothing. Callers re-run categorization afterwards.
+ */
+export function upsertOverride(
+  db: Database,
+  fingerprint: string,
+  patch: OverridePatch,
+) {
+  if (patch.category_key && !CATEGORY_BY_KEY.has(patch.category_key)) {
+    throw new Error(`Unknown category ${patch.category_key}`);
+  }
+  const current = getOverride(db, fingerprint);
+  const pick = <T>(next: T | undefined, prev: T): T =>
+    next === undefined ? prev : next;
+  const row = {
+    category: pick(patch.category_key, current?.category_key ?? null),
+    reimburses: pick(patch.reimburses, current?.reimburses ?? null),
+    one_off: patch.one_off === undefined
+      ? current?.one_off ?? 0
+      : (patch.one_off ? 1 : 0),
+    note: pick(patch.note, current?.note ?? null),
+  };
+  if (!row.category && !row.reimburses && !row.one_off) {
+    db.exec(`DELETE FROM overrides WHERE fingerprint = :fp`, {
+      fp: fingerprint,
+    });
+    return;
+  }
+  db.exec(
+    `INSERT INTO overrides(fingerprint, category_key, reimburses, one_off, note)
+     VALUES (:fp, :category, :reimburses, :one_off, :note)
+     ON CONFLICT(fingerprint) DO UPDATE SET category_key = excluded.category_key, reimburses = excluded.reimburses,
+       one_off = excluded.one_off, note = excluded.note, updated_at = datetime('now')`,
+    { fp: fingerprint, ...row },
+  );
+}
+
+/**
+ * Manual category for one transaction. Null clears it, together with any
+ * reimbursement link, since the link is what decided the category.
+ */
 export function setOverride(
   db: Database,
   fingerprint: string,
   category_key: string | null,
   note?: string | null,
 ) {
-  if (!category_key) {
-    db.exec(`DELETE FROM overrides WHERE fingerprint = :fp`, {
-      fp: fingerprint,
-    });
-    return;
-  }
-  if (!CATEGORY_BY_KEY.has(category_key)) {
-    throw new Error(`Unknown category ${category_key}`);
-  }
-  db.exec(
-    `INSERT INTO overrides(fingerprint, category_key, note) VALUES (:fp, :category, :note)
-     ON CONFLICT(fingerprint) DO UPDATE SET category_key = excluded.category_key, note = excluded.note, updated_at = datetime('now')`,
-    { fp: fingerprint, category: category_key, note: note ?? null },
-  );
+  upsertOverride(db, fingerprint, {
+    category_key,
+    ...(category_key ? {} : { reimburses: null }),
+    ...(note === undefined ? {} : { note }),
+  });
 }
 
 export function categoryOptions() {
