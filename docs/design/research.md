@@ -25,6 +25,8 @@ merchant identity cues, but avoid adding decorative category iconography.
 
 ## Recommended direction: Paper ledger
 
+[Side-by-side direction frames](directions.svg), using invented figures.
+
 Warm paper (`#f7f6f2`), charcoal ink (`#242c29`), teal interaction (`#245c50`).
 System sans, compact ledger rows, one pale-teal headline tile. Cashflow is a
 plain wordmark with a small ledger mark, replacing the emoji. The implemented

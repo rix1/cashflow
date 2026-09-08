@@ -1,0 +1,55 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="1120" height="620" viewBox="0 0 1120 620" role="img" aria-labelledby="title desc">
+  <title id="title">Cashflow design directions</title>
+  <desc id="desc">Two compact dashboard studies using synthetic figures. Recommended Paper ledger uses warm paper and teal. Graphite ledger uses cool white and slate.</desc>
+  <rect width="1120" height="620" fill="#e8e8e3"/>
+  <g font-family="-apple-system,BlinkMacSystemFont,Segoe UI,sans-serif">
+    <g transform="translate(24 24)">
+      <rect width="524" height="572" rx="12" fill="#f7f6f2"/>
+      <text x="24" y="38" font-size="13" fill="#626a65">01 · Anbefalt</text>
+      <text x="24" y="72" font-size="26" font-weight="600" fill="#242c29">Paper ledger</text>
+      <text x="24" y="101" font-size="14" fill="#626a65">Varmt papir, mørkt blekk, dempet grønt.</text>
+      <path d="M24 125h476" stroke="#dedfd7"/>
+      <text x="24" y="160" font-size="18" font-weight="600" fill="#242c29">Cashflow</text>
+      <text x="150" y="160" font-size="12" fill="#245c50">Oversikt</text>
+      <text x="218" y="160" font-size="12" fill="#626a65">Kategorier</text>
+      <text x="300" y="160" font-size="12" fill="#626a65">Transaksjoner</text>
+      <path d="M150 172h46" stroke="#245c50" stroke-width="2"/>
+      <rect x="24" y="194" width="274" height="120" rx="10" fill="#e6efe9"/>
+      <text x="42" y="224" font-size="12" fill="#626a65">Igjen etter utgifter / mnd</text>
+      <text x="42" y="268" font-size="36" font-weight="600" fill="#242c29">24 850</text>
+      <text x="42" y="294" font-size="12" fill="#626a65">inntekt minus utgifter</text>
+      <rect x="310" y="194" width="190" height="120" rx="10" fill="#fff" stroke="#dedfd7"/>
+      <text x="328" y="224" font-size="12" fill="#626a65">Utgifter / mnd</text>
+      <text x="328" y="268" font-size="28" font-weight="600" fill="#242c29">43 650</text>
+      <rect x="24" y="336" width="476" height="154" rx="6" fill="#fff" stroke="#dedfd7"/>
+      <path d="M24 372h476M24 410h476M24 448h476" stroke="#dedfd7"/>
+      <text x="40" y="360" font-size="12" fill="#626a65">Kategori</text><text x="484" y="360" text-anchor="end" font-size="12" fill="#626a65">Per måned</text>
+      <g font-size="13" fill="#242c29"><text x="40" y="396">Boliglån</text><text x="484" y="396" text-anchor="end">-18 500</text><text x="40" y="434">Dagligvarer</text><text x="484" y="434" text-anchor="end">-8 240</text><text x="40" y="472">Abonnementer</text><text x="484" y="472" text-anchor="end">-790</text></g>
+      <g transform="translate(24 514)"><circle cx="12" cy="12" r="12" fill="#242c29"/><circle cx="48" cy="12" r="12" fill="#245c50"/><circle cx="84" cy="12" r="12" fill="#678673"/><circle cx="120" cy="12" r="12" fill="#b27b68"/><text x="148" y="17" font-size="12" fill="#626a65">Rom for beslutningen. Tette tabeller.</text></g>
+    </g>
+    <g transform="translate(572 24)">
+      <rect width="524" height="572" rx="12" fill="#f6f7f8"/>
+      <text x="24" y="38" font-size="13" fill="#5e6670">02 · Alternativ</text>
+      <text x="24" y="72" font-size="26" font-weight="600" fill="#252a30">Graphite ledger</text>
+      <text x="24" y="101" font-size="14" fill="#5e6670">Kjølig hvitt, grafitt og skiferblått.</text>
+      <path d="M24 125h476" stroke="#dadee3"/>
+      <text x="24" y="160" font-size="18" font-weight="600" fill="#252a30">Cashflow</text>
+      <text x="150" y="160" font-size="12" fill="#425c73">Oversikt</text>
+      <text x="218" y="160" font-size="12" fill="#5e6670">Kategorier</text>
+      <text x="300" y="160" font-size="12" fill="#5e6670">Transaksjoner</text>
+      <path d="M150 172h46" stroke="#425c73" stroke-width="2"/>
+      <rect x="24" y="194" width="274" height="120" rx="3" fill="#e8edf2"/>
+      <text x="42" y="224" font-size="12" fill="#5e6670">Igjen etter utgifter / mnd</text>
+      <text x="42" y="268" font-size="36" font-weight="600" fill="#252a30">24 850</text>
+      <text x="42" y="294" font-size="12" fill="#5e6670">inntekt minus utgifter</text>
+      <rect x="310" y="194" width="190" height="120" rx="3" fill="#fff" stroke="#dadee3"/>
+      <text x="328" y="224" font-size="12" fill="#5e6670">Utgifter / mnd</text>
+      <text x="328" y="268" font-size="28" font-weight="600" fill="#252a30">43 650</text>
+      <rect x="24" y="336" width="476" height="154" rx="3" fill="#fff" stroke="#dadee3"/>
+      <path d="M24 372h476M24 410h476M24 448h476" stroke="#dadee3"/>
+      <text x="40" y="360" font-size="12" fill="#5e6670">Kategori</text><text x="484" y="360" text-anchor="end" font-size="12" fill="#5e6670">Per måned</text>
+      <g font-size="13" fill="#252a30"><text x="40" y="396">Boliglån</text><text x="484" y="396" text-anchor="end">-18 500</text><text x="40" y="434">Dagligvarer</text><text x="484" y="434" text-anchor="end">-8 240</text><text x="40" y="472">Abonnementer</text><text x="484" y="472" text-anchor="end">-790</text></g>
+      <g transform="translate(24 514)"><circle cx="12" cy="12" r="12" fill="#252a30"/><circle cx="48" cy="12" r="12" fill="#425c73"/><circle cx="84" cy="12" r="12" fill="#7a8c9d"/><circle cx="120" cy="12" r="12" fill="#ac8480"/><text x="148" y="17" font-size="12" fill="#5e6670">Strammere og mer kontorpreget.</text></g>
+    </g>
+  </g>
+</svg>
