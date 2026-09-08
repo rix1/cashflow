@@ -200,7 +200,7 @@ export const MortgagePage: FC<Props> = (
           <tbody>
             {sensitivity.map((s) => (
               <tr class={s.rate === whatIf.rate ? "selected-rate" : ""}>
-                <td>
+                <td data-sort={s.rate}>
                   {s.rate.toLocaleString("nb-NO", { maximumFractionDigits: 2 })}
                   {" "}
                   %{s.rate === whatIf.rate && (
@@ -253,7 +253,7 @@ export const MortgagePage: FC<Props> = (
             <tbody>
               {[...loanMonths].reverse().map((m) => (
                 <tr>
-                  <td>{monthLabel(m.month)}</td>
+                  <td data-sort={m.month}>{monthLabel(m.month)}</td>
                   <td class="num">{nok(m.interest)}</td>
                   <td class="num">{nok(m.principal)}</td>
                   <td class="num">{nok(m.fees)}</td>
@@ -285,7 +285,7 @@ export const MortgagePage: FC<Props> = (
             <tbody>
               {[...mortgageMonths].reverse().map((m) => (
                 <tr>
-                  <td>
+                  <td data-sort={m.month}>
                     <a
                       href={`/transactions?category=housing%3Amortgage&from=${m.month}&to=${m.month}`}
                     >

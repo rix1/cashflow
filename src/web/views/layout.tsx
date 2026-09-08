@@ -85,6 +85,13 @@ tr:last-child td { border-bottom:none } tbody tr:hover > td, tbody tr:focus-with
 tr.subtotal td, tr.group-head td { background:var(--soft); font-weight:600; color:var(--fg) }
 tr.group-head td { border-top:1px solid var(--line) }
 td a { text-decoration:none } td a:hover, td a:focus-visible { text-decoration:underline }
+th .sort { display:inline-flex; align-items:center; gap:4px; min-height:0; padding:0; border:0; border-radius:0; background:none; color:inherit; font:inherit; white-space:inherit; text-align:inherit; cursor:pointer }
+th .sort:hover { filter:none; color:var(--fg) }
+th .sort::after { content:"↕"; width:1em; font-size:11px; line-height:1; text-align:center; color:var(--muted); opacity:0 }
+th .sort:hover::after, th .sort:focus-visible::after { opacity:.7 }
+th[aria-sort] .sort { color:var(--fg) } th[aria-sort] .sort::after { color:var(--accent); opacity:1 }
+th[aria-sort=ascending] .sort::after { content:"↑" } th[aria-sort=descending] .sort::after { content:"↓" }
+th.num .sort { flex-direction:row-reverse }
 a.cell { color:inherit; display:block; margin:-9px -12px; padding:9px 12px }
 .category-grid th:first-child, .category-grid td:first-child { position:sticky; left:0; z-index:2; min-width:190px; background:var(--card); border-right:1px solid var(--line) }
 .category-grid th:first-child, .category-grid tr.group-head td:first-child { background:var(--soft) }
@@ -205,6 +212,7 @@ export const Layout: FC<
       >
       </div>
       <script dangerouslySetInnerHTML={{ __html: MULTI_SCRIPT }} />
+      <script dangerouslySetInnerHTML={{ __html: SORT_SCRIPT }} />
     </body>
   </html>
 );
@@ -386,6 +394,95 @@ document.addEventListener('htmx:afterRequest', e => {
     if (select) select.value = select.dataset.savedValue;
     announce('Endringen ble ikke lagret. Prøv igjen.');
   }
+});
+})();`;
+
+/**
+ * Click-to-sort for every table with a header row (opt out with `data-nosort`).
+ * A header cycles ascending, descending, then the server's original order.
+ * Cells sort by `data-sort` when present, otherwise by their text: Norwegian
+ * numbers ("12 450", "-1 249,50", "24 %") compare numerically when the whole
+ * column is numeric, empty cells and "–" go last, everything else uses a
+ * Norwegian collation. Group heads keep their place and sort the rows below
+ * them; subtotal and spanning rows stay at the bottom. The original order is
+ * remembered per table, and rows are looked up by id so htmx row swaps keep
+ * working.
+ */
+const SORT_SCRIPT = String.raw`(function(){
+const collator = new Intl.Collator('nb', { numeric: true, sensitivity: 'base' });
+const original = new WeakMap();
+const state = new WeakMap();
+function text(cell) {
+  if (cell.dataset.sort != null) return cell.dataset.sort;
+  const select = cell.querySelector('select');
+  return select ? (select.selectedOptions[0]?.textContent ?? '') : cell.textContent;
+}
+function key(cell) {
+  const s = cell ? text(cell).trim() : '';
+  if (!s || s === '–' || s === '-') return null;
+  const n = s.replace(/[\s≈%]/g, '').replace('−', '-').replace(',', '.');
+  return /^-?\d+(\.\d+)?$/.test(n) ? Number(n) : s;
+}
+function rows(table) {
+  let snapshot = original.get(table);
+  if (!snapshot) {
+    snapshot = Array.from(table.tBodies[0].rows, row => ({ id: row.id, row }));
+    original.set(table, snapshot);
+  }
+  return snapshot
+    .map(s => (s.id && document.getElementById(s.id)) || s.row)
+    .filter(row => row.isConnected);
+}
+function pinned(row) {
+  return row.classList.contains('subtotal') || row.querySelector('td[colspan]');
+}
+function apply(table, col, dir) {
+  const segments = [{ head: null, rows: [] }];
+  const tail = [];
+  for (const row of rows(table)) {
+    if (row.classList.contains('group-head')) segments.push({ head: row, rows: [] });
+    else if (pinned(row)) tail.push(row);
+    else segments.at(-1).rows.push(row);
+  }
+  const sortable = segments.flatMap(s => s.rows);
+  const keys = new Map(sortable.map(row => [row, key(row.cells[col])]));
+  const numeric = sortable.every(row => typeof keys.get(row) !== 'string');
+  const compare = (a, b) => {
+    const ka = keys.get(a), kb = keys.get(b);
+    if (ka == null || kb == null) return (ka == null) - (kb == null);
+    return dir * (numeric ? ka - kb : collator.compare(String(ka), String(kb)));
+  };
+  const out = [];
+  for (const s of segments) {
+    if (s.head) out.push(s.head);
+    out.push(...(dir ? s.rows.sort(compare) : s.rows));
+  }
+  table.tBodies[0].append(...out, ...tail);
+}
+for (const table of document.querySelectorAll('table:not([data-nosort])')) {
+  const head = table.tHead && table.tHead.rows[0];
+  if (!head || !table.tBodies[0]) continue;
+  for (const th of head.cells) {
+    if (!th.textContent.trim()) continue;
+    const button = document.createElement('button');
+    button.type = 'button';
+    button.className = 'sort';
+    button.append(...th.childNodes);
+    th.append(button);
+  }
+}
+document.addEventListener('click', e => {
+  const button = e.target.closest('th > .sort');
+  if (!button) return;
+  const th = button.parentElement;
+  const table = th.closest('table');
+  const col = th.cellIndex;
+  const current = state.get(table) || {};
+  const dir = current.col !== col ? 1 : current.dir === 1 ? -1 : 0;
+  state.set(table, { col, dir });
+  for (const cell of th.parentElement.cells) cell.removeAttribute('aria-sort');
+  if (dir) th.setAttribute('aria-sort', dir === 1 ? 'ascending' : 'descending');
+  apply(table, col, dir);
 });
 })();`;
 

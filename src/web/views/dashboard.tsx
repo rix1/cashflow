@@ -221,7 +221,7 @@ export const Dashboard: FC<Props> = (
                   const r = byMonth.get(m)!;
                   return (
                     <tr>
-                      <td>
+                      <td data-sort={m}>
                         <a
                           href={`/transactions?from=${m}&to=${m}${ownerQuery}`}
                         >

@@ -163,6 +163,7 @@ export const VendorsPage: FC<ListProps> = (
             )}
             {rows.map((r) => {
               const avg = periodAverages(r.sum, fromDate, toDate);
+              const trend = yearlyTrendPct(r.monthly);
               return (
                 <tr>
                   <td>
@@ -184,7 +185,7 @@ export const VendorsPage: FC<ListProps> = (
                   <td class="num">{nok(avg.weekly)}</td>
                   <td class="num">{nok(avg.monthly)}</td>
                   <td class="num">{nok(avg.yearly)}</td>
-                  <td>
+                  <td data-sort={trend == null ? undefined : trend}>
                     <Sparkline values={r.monthly} />
                   </td>
                   <td>
@@ -377,7 +378,7 @@ export const VendorPage: FC<DetailProps> = (
                   const v = vendor.monthly[months.length - 1 - i];
                   return (
                     <tr>
-                      <td>
+                      <td data-sort={m}>
                         <a
                           href={`/transactions?merchant=${
                             encodeURIComponent(vendor.merchant)

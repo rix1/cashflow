@@ -93,6 +93,10 @@ semantic variables so a future dark theme can replace surfaces and ink.
   explicit badge and reversible action. Keep both review queues.
 - **Table:** white surface, 9px/12px cells, quiet horizontal rules, 12px medium
   headers. Hover/focus-within highlights the row; links stay distinguishable.
+  Headers sort on click: ascending, descending, then the original order, with a
+  small arrow and `aria-sort`. Group heads keep their place and sort the rows
+  below them; subtotal rows stay last. Cells whose text does not sort (month
+  labels, annotated values) carry `data-sort`.
 - **Category grid:** explicit horizontal scroll region with keyboard focus,
   sticky first column on an opaque surface, bold group totals. Cells with no
   transactions show a dash with accessible text; a real zero displays `0`.
