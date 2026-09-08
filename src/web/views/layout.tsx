@@ -315,6 +315,11 @@ export const MultiSelect: FC<
 };
 
 const MULTI_SCRIPT = `(function(){
+const nav = document.querySelector('header nav');
+const active = nav.querySelector('[aria-current="page"]');
+if (active && nav.scrollWidth > nav.clientWidth) {
+  nav.scrollLeft = active.offsetLeft - nav.offsetLeft - (nav.clientWidth - active.offsetWidth) / 2;
+}
 function update(d) {
   const chosen = Array.from(d.querySelectorAll('input:checked'), i => i.parentElement.textContent.trim());
   const label = !chosen.length ? d.dataset.empty : chosen.length <= 2 ? chosen.join(', ') : chosen.length + ' valgt';
@@ -451,6 +456,7 @@ function draw() {
     d.borderColor = color(d.borderColor);
     d.pointStyle = d.type === 'line' ? 'line' : 'rectRounded';
     if (d.type === 'line') {
+      d.order ??= -1;
       d.borderWidth = 2;
       d.pointRadius ??= 2;
     } else {
