@@ -9,7 +9,7 @@ Implementation contract, 2026-09-08. Scope and revision:
 - Give the decision one headline; leave the underlying numbers nearby.
 - Use warm neutrals for structure, teal for interaction, color for meaning.
 - Keep tables compact and decisions spacious. Align every amount to the right.
-- Name the basis of a number: salary, all income, observed spending or estimate.
+- Name the basis of a number: operating income, observed spending or estimate.
 - Keep navigation, queries, categorization and calculations intact.
 
 ## Tokens
@@ -75,8 +75,8 @@ semantic variables so a future dark theme can replace surfaces and ink.
 - Keep all nine navigation destinations and their order. Active navigation has
   an underline and `aria-current`; a skip link goes to main content.
 - Main width 1360px, gutters 32px, bottom space 64px. Sections have 32px rhythm.
-- KPI tiles use a responsive grid with a 180px minimum. Dashboard headline spans
-  two columns on desktop; use one column below 600px. Never truncate amounts.
+- KPI tiles use a responsive grid with a 180px minimum. Dashboard headline gets
+  extra width on desktop; use one column below 600px. Never truncate amounts.
 - Below 1100px let navigation occupy its own row. Below 600px use 16px gutters
   and horizontally scroll navigation and tables, never the entire page.
 
@@ -85,9 +85,12 @@ semantic variables so a future dark theme can replace surfaces and ink.
 - **KPI:** small muted label, large value, small explanation. Quiet white tile;
   only the primary decision receives a pale teal surface. Keep positive expense
   magnitudes neutral; negative balances retain a minus sign and negative ink.
-- **Dashboard:** headline “Igjen etter utgifter / mnd”; explain “lønn minus
-  utgifter”. Show salary, expenses and saving transfers alongside it. Put
+- **Dashboard:** headline “Igjen etter utgifter / mnd”; explain operating income
+  minus expenses. Show income, expenses and saving transfers alongside it. Put
   uncategorized work in a compact note, not a competing headline KPI.
+- **Operating view:** keep held-out money and drill-down links visible. Show
+  typical-month medians beside averages; one-offs stay in the ledger with an
+  explicit badge and reversible action. Keep both review queues.
 - **Table:** white surface, 9px/12px cells, quiet horizontal rules, 12px medium
   headers. Hover/focus-within highlights the row; links stay distinguishable.
 - **Category grid:** explicit horizontal scroll region with keyboard focus,
@@ -147,7 +150,8 @@ semantic variables so a future dark theme can replace surfaces and ink.
   transaction and category cells must retain their sign. Missing is `–`, zero
   `0`.
 - Norwegian bokmål, short factual labels, sentence case, no exclamation marks.
-- Never call salary net “all income”. Keep observed spending and cadence
+- Operating income is salary, interest and employer refunds, consistently across
+  tiles, charts and mortgage calculations. Keep observed spending and cadence
   estimates visibly distinct; styling must not imply estimate precision.
 
 ## Don'ts

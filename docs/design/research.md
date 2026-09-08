@@ -17,7 +17,7 @@ Calm comes from a predictable reading order: context, number, explanation,
 then detail. Density is useful when columns align and the same action sits in
 the same place on every row. Clutter comes from giving every card, badge,
 button and amount equal visual emphasis. Cashflow already has a sensible
-information architecture; the strongest improvement is to make the salary-based
+information architecture; the strongest improvement is to make the operating
 monthly remainder the first read, and let the financial tables keep their detail.
 Use pale surfaces to group, thin rules to align, and color sparingly for meaning.
 Give notes a next action and table controls a strong focus state. Keep the existing

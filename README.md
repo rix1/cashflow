@@ -122,8 +122,9 @@ favicons fetched once by the server from DuckDuckGo's icon service into
 monogram for the rest; pages themselves never call third parties.
 
 Transaction filters combine direction (all/in/out), multiple categories,
-owners and accounts, and a from/to period. Dashboard headline figures and
-mortgage headroom use salary; the monthly cash-flow chart includes all income.
+owners and accounts, and a from/to period. The one-off filter shows entries
+excluded from aggregates. Dashboard and mortgage figures share the operating
+income definition described above.
 
 ## Privacy
 

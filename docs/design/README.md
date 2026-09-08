@@ -1,8 +1,8 @@
 # Design handoff
 
 Implementation started 2026-09-08 in a leased Treehouse worktree on
-`web/design-system`, based on `6b01f7f`. The brief has been reconciled with
-merchant pages, salary-based summaries and multi-select transaction filters.
+`web/design-system`, rebased onto `b2571dc`. The brief has been reconciled with
+operating income, one-offs, medians, pass-through money and transaction filters.
 
 - `../../DESIGN.md`: chosen Paper ledger system and implementation checklist.
 - `research.md`: six reference notes and the alternative direction.

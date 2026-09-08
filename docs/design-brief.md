@@ -2,12 +2,17 @@
 
 ## Implementation revision · 2026-09-08
 
-Reviewed against `6b01f7f`, including the salary-based dashboard change
-(`2ef657a`), merchant overview (`8869d23`) and transaction filters (`6b01f7f`).
+Reviewed and rebased against `b2571dc`, including operating income (`7e70f26`),
+one-offs and medians (`3a0b50a`), and pass-through money (`e2b3e94`).
 The visual constraints below still apply. `DESIGN.md` records the chosen system.
 
-- Dashboard headline: salary minus expenses per month. Label it explicitly;
-  the monthly chart and table still show all income and actual net cash flow.
+- Dashboard headline: operating income minus expenses per month. Tiles, chart,
+  tables and mortgage headroom share this definition: salary, interest and
+  employer refunds. Explain the basis without inventing a second income total.
+- Preserve the held-out summary and links for other income, one-offs and the
+  `Utenfor` group. Keep one-off controls and filter visible in transaction rows.
+- Preserve typical-month medians alongside averages and explain that empty
+  months count as zero. Review includes a second queue for other income.
 - Include **Mottakere** (`/vendors`) and merchant detail pages: logos, period
   averages, sparklines, trends and their transaction tables are established UI.
 - `/fixed` is **Abonnementer** in navigation and also covers other recurring
@@ -15,10 +20,9 @@ The visual constraints below still apply. `DESIGN.md` records the chosen system.
 - Transactions use an all/in/out direction control and checkbox multi-selects
   for category, owner and account. Preserve repeated query parameters, keyboard
   operation and `from`/`to` dates. Do not reintroduce a separate month filter.
-- In-progress work in the main worktree distinguishes actual subscription
-  spending over 12 months from cadence estimates, and refines mortgage input
-  steps. Keep those calculations and inputs owned by that work; shared styles
-  must accommodate their additional labels and subtotal rows.
+- Subscription totals distinguish actual spending over 12 months from justified
+  cadence estimates. Preserve those labels, subtotal rows and mortgage input
+  precision. Schema v4 keeps category and one-off overrides independent.
 - Chart.js and htmx are already vendored. Add no remote fonts or dependencies.
   Existing logo requests remain as documented in the README.
 - Use synthetic data for implementation proofs, screenshots and interaction
