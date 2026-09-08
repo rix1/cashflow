@@ -1,16 +1,20 @@
 import type { FC } from "hono/jsx";
 import { nok } from "../format.ts";
-import type { ReviewGroup } from "../queries.ts";
+import type { ReviewGroup, TxRow } from "../queries.ts";
 import { CategorySelect, OwnerSelect } from "./layout.tsx";
+import { TxTableHead, TxTableRow } from "./transactions.tsx";
 
 type Props = {
   groups: ReviewGroup[];
   stats: { count: number; sum: number; merchants: number };
+  otherIncome: TxRow[];
   owner?: string;
   owners: string[];
 };
 
-export const ReviewPage: FC<Props> = ({ groups, stats, owner, owners }) => (
+export const ReviewPage: FC<Props> = (
+  { groups, stats, otherIncome, owner, owners },
+) => (
   <>
     <h1>Gjennomgang av ukategoriserte</h1>
     <p class="muted">
@@ -69,6 +73,20 @@ export const ReviewPage: FC<Props> = ({ groups, stats, owner, owners }) => (
             </tr>
           ))}
         </tbody>
+      </table>
+    </div>
+
+    <h2>Annen inntekt å avklare</h2>
+    <p class="muted">
+      {otherIncome.length}{" "}
+      innbetalinger traff samlereglene for giro og innkommende overføring og ble
+      «Annen inntekt». Koble hver til utgiften den betaler tilbake, så havner
+      den i samme kategori som utgiften, eller sett riktig kategori.
+    </p>
+    <div class="tablewrap">
+      <table>
+        <TxTableHead />
+        <tbody>{otherIncome.map((tx) => <TxTableRow tx={tx} />)}</tbody>
       </table>
     </div>
   </>

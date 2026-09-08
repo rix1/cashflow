@@ -83,7 +83,10 @@ into stable merchant keys so rules stay short.
 
 **Categorization** (`src/categorize/`) is layered, first match wins:
 
-1. Manual overrides made in the UI (keyed by fingerprint, survive rebuilds).
+1. Manual decisions made in the UI, keyed by fingerprint so they survive
+   rebuilds: a category override, or a reimbursement link that gives an
+   inflow the category of the expense it pays back, so the two net out in
+   the same place instead of inflating income.
 2. Bank signals: salary, loan repayment, fees, interest, cash.
 3. Transfers: counterparty account in `accounts.json`, or counterparty name
    matching an owner alias. Own-to-own transfers, partner transfers, savings

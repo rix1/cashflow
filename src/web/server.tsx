@@ -16,7 +16,11 @@ import { Dashboard } from "./views/dashboard.tsx";
 import { CategoriesPage } from "./views/categories.tsx";
 import { FixedPage } from "./views/fixed.tsx";
 import { MortgagePage } from "./views/mortgage.tsx";
-import { TransactionsPage, TxTableRow } from "./views/transactions.tsx";
+import {
+  ReimbursePicker,
+  TransactionsPage,
+  TxTableRow,
+} from "./views/transactions.tsx";
 import { ReviewPage } from "./views/review.tsx";
 import { RulesPage } from "./views/rules.tsx";
 import { DataPage } from "./views/data.tsx";
@@ -308,13 +312,44 @@ export function createApp(dbPath?: string) {
     return c.html(<TxTableRow tx={q.getTransaction(db, id)!} />);
   });
 
+  app.get("/transactions/:id/reimburse", (c) => {
+    const tx = q.getTransaction(db, Number(c.req.param("id")));
+    if (!tx) return c.text("not found", 404);
+    return c.html(
+      <ReimbursePicker
+        tx={tx}
+        candidates={q.reimbursementCandidates(db, tx)}
+      />,
+    );
+  });
+
+  app.post("/transactions/:id/reimburse", async (c) => {
+    const id = Number(c.req.param("id"));
+    const tx = q.getTransaction(db, id);
+    if (!tx) return c.text("not found", 404);
+    const body = await c.req.parseBody();
+    q.linkReimbursement(
+      db,
+      tx.fingerprint,
+      String(body["expense"] ?? "") || null,
+    );
+    categorizeAll(db, config);
+    return c.html(<TxTableRow tx={q.getTransaction(db, id)!} />);
+  });
+
   app.get("/review", (c) => {
     const owner = c.req.query("owner") || undefined;
+    const otherIncome = q.listTransactions(db, {
+      category: ["income:other"],
+      owner: owner ? [owner] : undefined,
+      pageSize: 100,
+    }).rows;
     return c.html(
       <Layout title="Gjennomgang" active="/review" assets={assets}>
         <ReviewPage
           groups={q.reviewQueue(db, owner)}
           stats={q.uncategorizedStats(db)}
+          otherIncome={otherIncome}
           owner={owner}
           owners={q.getOwners(db)}
         />

@@ -1,8 +1,10 @@
 import type { FC } from "hono/jsx";
+import { CATEGORY_BY_KEY } from "../../categorize/categories.ts";
 import { nok } from "../format.ts";
 import {
   type AccountRow,
   categoryOptions,
+  type ReimbursementCandidate,
   type TxFilters,
   type TxRow,
 } from "../queries.ts";
@@ -19,6 +21,9 @@ export const SourceBadge: FC<{ source: string | null }> = ({ source }) => {
     return <span class="badge none">ingen</span>;
   }
   if (source === "manual") return <span class="badge manual">manuell</span>;
+  if (source === "reimbursement") {
+    return <span class="badge manual">refusjon</span>;
+  }
   if (source.startsWith("transfer")) {
     return <span class="badge transfer">overføring</span>;
   }
@@ -27,6 +32,93 @@ export const SourceBadge: FC<{ source: string | null }> = ({ source }) => {
   if (source.startsWith("rule:")) return <span class="badge">regel</span>;
   return <span class="badge">{source}</span>;
 };
+
+const swapRow = (tx: TxRow) => ({
+  "hx-target": `#tx-${tx.id}`,
+  "hx-swap": "outerHTML",
+});
+
+/** Inline picker for the expense an inflow pays back; loaded on demand. */
+export const ReimbursePicker: FC<
+  { tx: TxRow; candidates: ReimbursementCandidate[] }
+> = ({ tx, candidates }) => (
+  <form
+    class="inline-form"
+    hx-post={`/transactions/${tx.id}/reimburse`}
+    {...swapRow(tx)}
+  >
+    <select name="expense" class="cat">
+      <option value="">– utgiften som ble refundert –</option>
+      {candidates.map((e) => (
+        <option value={e.fingerprint}>
+          {e.date} · {e.merchant} · {nok(e.amount)} ·{" "}
+          {CATEGORY_BY_KEY.get(e.category_key)?.name ?? e.category_key}
+          {e.owner !== tx.owner ? ` · ${e.owner}` : ""}
+        </option>
+      ))}
+    </select>
+    <button type="submit">Koble</button>
+  </form>
+);
+
+/**
+ * Reimbursement state under the category: the link on an inflow, the
+ * paid-back sum on an expense, or the button that opens the picker.
+ */
+const Reimbursement: FC<{ tx: TxRow }> = ({ tx }) => {
+  if (tx.reimburses) {
+    return (
+      <div class="small muted">
+        ↩ refusjon for {tx.reimburses_date} {tx.reimburses_merchant}{" "}
+        ({nok(tx.reimburses_amount)}){" "}
+        <button
+          type="button"
+          class="secondary small"
+          hx-post={`/transactions/${tx.id}/reimburse`}
+          hx-vals='{"expense": ""}'
+          {...swapRow(tx)}
+          title="Fjern koblingen"
+        >
+          ×
+        </button>
+      </div>
+    );
+  }
+  if (tx.reimbursed > 0) {
+    return <div class="small muted">↩ refundert {nok(tx.reimbursed)}</div>;
+  }
+  const kind = CATEGORY_BY_KEY.get(tx.category_key)?.kind;
+  const couldBeRefund = tx.amount > 0 &&
+    (kind === "income" || kind === "expense") &&
+    tx.category_key !== "income:salary";
+  if (!couldBeRefund) return null;
+  return (
+    <div class="small" id={`reimb-${tx.id}`}>
+      <button
+        type="button"
+        class="secondary small"
+        hx-get={`/transactions/${tx.id}/reimburse`}
+        hx-target={`#reimb-${tx.id}`}
+        hx-swap="innerHTML"
+        title="Koble til utgiften denne betaler tilbake"
+      >
+        refusjon for…
+      </button>
+    </div>
+  );
+};
+
+export const TxTableHead: FC = () => (
+  <thead>
+    <tr>
+      <th>Dato</th>
+      <th>Konto</th>
+      <th>Mottaker / beskrivelse</th>
+      <th class="num">Beløp</th>
+      <th>Kategori</th>
+    </tr>
+  </thead>
+);
 
 export const TxTableRow: FC<{ tx: TxRow }> = ({ tx }) => (
   <tr id={`tx-${tx.id}`}>
@@ -81,6 +173,7 @@ export const TxTableRow: FC<{ tx: TxRow }> = ({ tx }) => (
           </button>
         )}
       </form>
+      <Reimbursement tx={tx} />
     </td>
   </tr>
 );
@@ -215,15 +308,7 @@ export const TransactionsPage: FC<Props> = (
       </p>
       <div class="tablewrap">
         <table>
-          <thead>
-            <tr>
-              <th>Dato</th>
-              <th>Konto</th>
-              <th>Mottaker / beskrivelse</th>
-              <th class="num">Beløp</th>
-              <th>Kategori</th>
-            </tr>
-          </thead>
+          <TxTableHead />
           <tbody>{rows.map((tx) => <TxTableRow tx={tx} />)}</tbody>
         </table>
       </div>

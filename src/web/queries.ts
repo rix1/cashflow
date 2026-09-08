@@ -174,11 +174,31 @@ export type TxRow = {
   category_key: string;
   category_source: string | null;
   transfer_group: string | null;
+  one_off: number;
   owner: string;
   bank: string;
   account_name: string;
   note: string | null;
+  /** Fingerprint of the expense this inflow pays back, with its details. */
+  reimburses: string | null;
+  reimburses_date: string | null;
+  reimburses_merchant: string | null;
+  reimburses_amount: number | null;
+  /** Inflows linked to this expense, as a positive sum. */
+  reimbursed: number;
 };
+
+const TX_SELECT =
+  `SELECT t.id, t.fingerprint, t.date, t.amount, t.currency, t.original_amount, t.original_currency, t.description, t.merchant,
+          t.counterparty, t.bank_type, t.bank_subtype, t.message, t.category_key, t.category_source, t.transfer_group, t.one_off,
+          a.owner, a.bank, a.name AS account_name, o.note, o.reimburses,
+          e.date AS reimburses_date, e.merchant AS reimburses_merchant, e.amount AS reimburses_amount,
+          IFNULL((SELECT SUM(r.amount) FROM overrides ro JOIN transactions r ON r.fingerprint = ro.fingerprint
+                  WHERE ro.reimburses = t.fingerprint), 0) AS reimbursed`;
+const TX_JOINS =
+  `FROM transactions t JOIN accounts a ON a.id = t.account_id JOIN categories c ON c.key = t.category_key
+   LEFT JOIN overrides o ON o.fingerprint = t.fingerprint
+   LEFT JOIN transactions e ON e.fingerprint = o.reimburses`;
 
 export function listTransactions(
   db: Database,
@@ -226,11 +246,7 @@ export function listTransactions(
     where.push(`t.merchant = :merchant`);
     params.merchant = f.merchant;
   }
-  const base =
-    `FROM transactions t JOIN accounts a ON a.id = t.account_id JOIN categories c ON c.key = t.category_key
-                LEFT JOIN overrides o ON o.fingerprint = t.fingerprint WHERE ${
-      where.join(" AND ")
-    }`;
+  const base = `${TX_JOINS} WHERE ${where.join(" AND ")}`;
   const totals = db.prepare(
     `SELECT COUNT(*) AS total, IFNULL(SUM(t.amount), 0) AS sum ${base}`,
   ).get<{ total: number; sum: number }>(params)!;
@@ -238,10 +254,7 @@ export function listTransactions(
   const offset = ((f.page ?? 1) - 1) * pageSize;
   const rows = db
     .prepare(
-      `SELECT t.id, t.fingerprint, t.date, t.amount, t.currency, t.original_amount, t.original_currency, t.description, t.merchant,
-              t.counterparty, t.bank_type, t.bank_subtype, t.message, t.category_key, t.category_source, t.transfer_group,
-              a.owner, a.bank, a.name AS account_name, o.note
-       ${base} ORDER BY t.date DESC, t.id DESC LIMIT ${pageSize} OFFSET ${offset}`,
+      `${TX_SELECT} ${base} ORDER BY t.date DESC, t.id DESC LIMIT ${pageSize} OFFSET ${offset}`,
     )
     .all<TxRow>(params);
   return { rows, total: totals.total, sum: totals.sum };
@@ -249,14 +262,55 @@ export function listTransactions(
 
 export function getTransaction(db: Database, id: number): TxRow | undefined {
   return db
-    .prepare(
-      `SELECT t.id, t.fingerprint, t.date, t.amount, t.currency, t.original_amount, t.original_currency, t.description, t.merchant,
-              t.counterparty, t.bank_type, t.bank_subtype, t.message, t.category_key, t.category_source, t.transfer_group,
-              a.owner, a.bank, a.name AS account_name, o.note
-       FROM transactions t JOIN accounts a ON a.id = t.account_id LEFT JOIN overrides o ON o.fingerprint = t.fingerprint
-       WHERE t.id = :id`,
-    )
+    .prepare(`${TX_SELECT} ${TX_JOINS} WHERE t.id = :id`)
     .get<TxRow>({ id });
+}
+
+export type ReimbursementCandidate = {
+  id: number;
+  fingerprint: string;
+  date: string;
+  merchant: string;
+  amount: number;
+  category_key: string;
+  owner: string;
+};
+
+/** Expenses an inflow could be paying back: the 180 days before it, newest first. */
+export function reimbursementCandidates(
+  db: Database,
+  inflow: Pick<TxRow, "date">,
+  limit = 150,
+): ReimbursementCandidate[] {
+  return db
+    .prepare(
+      `SELECT t.id, t.fingerprint, t.date, t.merchant, t.amount, t.category_key, a.owner
+       FROM transactions t JOIN accounts a ON a.id = t.account_id JOIN categories c ON c.key = t.category_key
+       WHERE c.kind = 'expense' AND t.amount < 0 AND t.date <= :to AND t.date >= date(:to, '-180 days')
+       ORDER BY t.date DESC, ABS(t.amount) DESC LIMIT :limit`,
+    )
+    .all<ReimbursementCandidate>({ to: inflow.date, limit });
+}
+
+/**
+ * Marks an inflow as paying back an expense (null unlinks). The inflow's
+ * category is derived from the expense on every categorization run.
+ */
+export function linkReimbursement(
+  db: Database,
+  inflowFingerprint: string,
+  expenseFingerprint: string | null,
+) {
+  if (expenseFingerprint) {
+    const expense = db
+      .prepare(`SELECT amount FROM transactions WHERE fingerprint = :fp`)
+      .get<{ amount: number }>({ fp: expenseFingerprint });
+    if (!expense) throw new Error("Unknown expense");
+    if (expense.amount >= 0) {
+      throw new Error("A reimbursement must point at an expense");
+    }
+  }
+  upsertOverride(db, inflowFingerprint, { reimburses: expenseFingerprint });
 }
 
 export type ReviewGroup = {
@@ -675,8 +729,9 @@ export function upsertOverride(
 }
 
 /**
- * Manual category for one transaction. Null clears it, together with any
- * reimbursement link, since the link is what decided the category.
+ * Manual category for one transaction; null clears it. Either way any
+ * reimbursement link goes: a chosen category replaces the derived one, and
+ * clearing means "back to the rules".
  */
 export function setOverride(
   db: Database,
@@ -686,7 +741,7 @@ export function setOverride(
 ) {
   upsertOverride(db, fingerprint, {
     category_key,
-    ...(category_key ? {} : { reimburses: null }),
+    reimburses: null,
     ...(note === undefined ? {} : { note }),
   });
 }
