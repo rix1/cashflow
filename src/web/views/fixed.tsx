@@ -20,15 +20,24 @@ const CADENCE: Record<string, string> = {
   irregular: "uregelmessig",
 };
 
+const ESTIMATE_HINT =
+  "Anslag: median betaling × rytme. Vises bare for aktive poster med minst to hele sykluser.";
+
 export const FixedPage: FC<Props> = ({ items, filter, owners }) => {
-  const active = items.filter((i) => i.active);
-  const byGroup = new Map<string, number>();
-  for (const i of active) {
+  // Observed money covers every listed item, inactive ones included when
+  // shown: a subscription cancelled in March still cost money this year.
+  const paidByGroup = new Map<string, number>();
+  for (const i of items) {
     const g = CATEGORY_BY_KEY.get(i.category_key)?.group ?? "Annet";
-    byGroup.set(g, (byGroup.get(g) ?? 0) + i.monthly_equivalent);
+    paidByGroup.set(g, (paidByGroup.get(g) ?? 0) + i.paid_12m);
   }
-  const total = active.reduce((s, i) => s + i.monthly_equivalent, 0);
-  const yearly = total * 12;
+  const paidTotal = items.reduce((s, i) => s + i.paid_12m, 0);
+  const active = items.filter((i) => i.active);
+  const estimated = active.filter((i) => i.monthly_equivalent != null);
+  const rateTotal = estimated.reduce(
+    (s, i) => s + (i.monthly_equivalent ?? 0),
+    0,
+  );
   const ownerQuery = filter.owner
     ? `?owner=${encodeURIComponent(filter.owner)}`
     : "";
@@ -42,7 +51,9 @@ export const FixedPage: FC<Props> = ({ items, filter, owners }) => {
       </h1>
       <p class="muted">
         Betalinger til samme mottaker med jevn rytme (ukentlig, månedlig,
-        kvartalsvis, årlig). Beløp er median per betaling omregnet til måned.
+        kvartalsvis, årlig). «Siste 12 mnd» er det som faktisk er betalt de
+        siste 365 dagene. «≈ per mnd» er et anslag: median betaling omregnet
+        etter rytmen, vist bare for aktive poster med minst to hele sykluser.
         Aktiv betyr betalt i løpet av den siste perioden; inaktive er
         sannsynligvis avsluttet.
       </p>
@@ -102,17 +113,22 @@ export const FixedPage: FC<Props> = ({ items, filter, owners }) => {
       </form>
       <div class="tiles">
         <div class="tile">
-          <div class="label">Per måned (aktive i utvalget)</div>
-          <div class="value neg">{nok(total)}</div>
+          <div class="label">Betalt siste 12 mnd (i utvalget)</div>
+          <div class="value neg">{nok(paidTotal)}</div>
           <div class="sub">
-            {active.length} poster · {nok(yearly)} per år
+            {items.length} poster · anslag ≈ {nok(rateTotal)} per mnd for{" "}
+            {estimated.length < active.length
+              ? `${estimated.length} av ${active.length} aktive`
+              : `${active.length} aktive`}
           </div>
         </div>
-        {[...byGroup.entries()].sort((a, b) => b[1] - a[1]).map(([g, v]) => (
+        {[...paidByGroup.entries()].sort((a, b) => b[1] - a[1]).map((
+          [g, v],
+        ) => (
           <div class="tile">
             <div class="label">{g}</div>
             <div class="value">{nok(v)}</div>
-            <div class="sub">per måned</div>
+            <div class="sub">siste 12 mnd</div>
           </div>
         ))}
       </div>
@@ -124,8 +140,8 @@ export const FixedPage: FC<Props> = ({ items, filter, owners }) => {
               <th>Kategori</th>
               <th>Rytme</th>
               <th class="num">Per betaling</th>
-              <th class="num">Per mnd</th>
-              <th class="num">Per år</th>
+              <th class="num">Siste 12 mnd</th>
+              <th class="num" title={ESTIMATE_HINT}>≈ per mnd</th>
               <th class="num">Antall</th>
               <th>Første</th>
               <th>Siste</th>
@@ -162,8 +178,12 @@ export const FixedPage: FC<Props> = ({ items, filter, owners }) => {
                     : null}
                 </td>
                 <td class="num">{nok(i.median_amount)}</td>
-                <td class="num">{nok(i.monthly_equivalent)}</td>
-                <td class="num">{nok(i.monthly_equivalent * 12)}</td>
+                <td class="num">{nok(i.paid_12m)}</td>
+                <td class="num" title={ESTIMATE_HINT}>
+                  {i.monthly_equivalent == null
+                    ? <span class="muted">–</span>
+                    : nok(i.monthly_equivalent)}
+                </td>
                 <td class="num">{i.count}</td>
                 <td class="nowrap small">{i.first}</td>
                 <td class="nowrap small">{i.last}</td>
@@ -175,6 +195,22 @@ export const FixedPage: FC<Props> = ({ items, filter, owners }) => {
                 </td>
               </tr>
             ))}
+            {items.length > 0 && (
+              <tr class="subtotal">
+                <td>Sum</td>
+                <td></td>
+                <td></td>
+                <td></td>
+                <td class="num">{nok(paidTotal)}</td>
+                <td class="num" title={ESTIMATE_HINT}>
+                  ≈ {nok(rateTotal)}
+                </td>
+                <td class="num">
+                  {items.reduce((s, i) => s + i.count, 0)}
+                </td>
+                <td colspan={4}></td>
+              </tr>
+            )}
           </tbody>
         </table>
       </div>

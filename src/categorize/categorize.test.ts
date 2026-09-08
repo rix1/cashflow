@@ -256,10 +256,43 @@ Deno.test("detectRecurring finds monthly subscriptions and ignores noise", () =>
     date: "2026-07-20",
     amount: -900,
   });
+  // Stopped in April: real money this year, but no run-rate.
+  for (const m of [1, 2, 3, 4]) {
+    rows.push({
+      merchant: "HBO",
+      category_key: "subscriptions",
+      owner: "alice",
+      date: `2026-0${m}-10`,
+      amount: -99,
+    });
+  }
+  // Three charges 24 days apart: monthly, but under two full cycles.
+  for (const d of ["2026-10-01", "2026-10-25", "2026-11-18"]) {
+    rows.push({
+      merchant: "NETFLIX",
+      category_key: "subscriptions",
+      owner: "alice",
+      date: d,
+      amount: -129,
+    });
+  }
   const items = detectRecurring(rows, "2026-12-20");
   const spotify = items.find((i) => i.merchant === "SPOTIFY")!;
   assertEquals(spotify.cadence, "monthly");
   assertEquals(spotify.monthly_equivalent, 169);
+  assertEquals(spotify.paid_12m, 12 * 169);
   assertEquals(spotify.active, true);
+  assertEquals(items[0].merchant, "SPOTIFY", "sorted by money paid");
   assertEquals(items.some((i) => i.merchant === "IKEA"), false);
+
+  const hbo = items.find((i) => i.merchant === "HBO")!;
+  assertEquals(hbo.active, false);
+  assertEquals(hbo.paid_12m, 4 * 99);
+  assertEquals(hbo.monthly_equivalent, null);
+
+  const netflix = items.find((i) => i.merchant === "NETFLIX")!;
+  assertEquals(netflix.cadence, "monthly");
+  assertEquals(netflix.active, true);
+  assertEquals(netflix.paid_12m, 3 * 129);
+  assertEquals(netflix.monthly_equivalent, null);
 });

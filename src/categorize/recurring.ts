@@ -22,7 +22,14 @@ export type RecurringItem = {
   first: string;
   last: string;
   median_amount: number;
-  monthly_equivalent: number;
+  /** Actually paid in the 365 days up to asOf, as a positive number. */
+  paid_12m: number;
+  /**
+   * Median payment scaled to a month by cadence: an estimate, not a
+   * measurement. Null when the item is inactive or the observations span
+   * fewer than two cycles.
+   */
+  monthly_equivalent: number | null;
   stability: number;
   active: boolean;
 };
@@ -70,6 +77,11 @@ export function detectRecurring(
       : median(amounts.map((a) => Math.abs(a - medianAmount))) / medianAmount;
     const last = dates[dates.length - 1];
     const active = daysBetween(last, asOf) <= medianInterval * 1.6 + 7;
+    const twoCycles = daysBetween(dates[0], last) >=
+      2 * cycleDays(cadence) * 0.9;
+    const paid12m = list
+      .filter((r) => r.date <= asOf && daysBetween(r.date, asOf) < 365)
+      .reduce((s, r) => s + Math.abs(r.amount), 0);
     items.push({
       merchant,
       category_key: mostCommon(list.map((r) => r.category_key)),
@@ -79,12 +91,33 @@ export function detectRecurring(
       first: dates[0],
       last,
       median_amount: round2(medianAmount),
-      monthly_equivalent: round2(medianAmount * perMonth(cadence)),
+      paid_12m: round2(paid12m),
+      monthly_equivalent: active && twoCycles
+        ? round2(medianAmount * perMonth(cadence))
+        : null,
       stability: round2(stability),
       active,
     });
   }
-  return items.sort((a, b) => b.monthly_equivalent - a.monthly_equivalent);
+  return items.sort((a, b) =>
+    b.paid_12m - a.paid_12m ||
+    (b.monthly_equivalent ?? 0) - (a.monthly_equivalent ?? 0)
+  );
+}
+
+function cycleDays(c: Cadence): number {
+  switch (c) {
+    case "weekly":
+      return 7;
+    case "monthly":
+      return 365 / 12;
+    case "quarterly":
+      return 365 / 4;
+    case "yearly":
+      return 365;
+    default:
+      return Infinity;
+  }
 }
 
 function classify(days: number): Cadence {
