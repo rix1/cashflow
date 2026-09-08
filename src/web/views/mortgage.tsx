@@ -38,9 +38,9 @@ export const MortgagePage: FC<Props> = (
   const taxBack = newInterest * NORWEGIAN_INTEREST_DEDUCTION;
   const currentMortgage = -averages.mortgage;
   const delta = newPayment - currentMortgage;
-  const headroomNow = averages.salary + averages.expenseExMortgage -
+  const headroomNow = averages.income + averages.expenseExMortgage -
     currentMortgage;
-  const headroomNew = averages.salary + averages.expenseExMortgage - newPayment;
+  const headroomNew = averages.income + averages.expenseExMortgage - newPayment;
 
   const chart = {
     type: "bar",
@@ -105,7 +105,9 @@ export const MortgagePage: FC<Props> = (
           <div class={`value ${headroomNow >= 0 ? "pos" : "neg"}`}>
             {nok(headroomNow)}
           </div>
-          <div class="sub">lønn − utgifter (siste 12 mnd, husholdning)</div>
+          <div class="sub">
+            inntekt − utgifter (siste 12 mnd, husholdning)
+          </div>
         </div>
       </div>
 
@@ -182,7 +184,7 @@ export const MortgagePage: FC<Props> = (
               {nok(headroomNew)}
             </div>
             <div class="sub">
-              lønn {nok(averages.salary)} − andre utgifter{" "}
+              inntekt {nok(averages.income)} − andre utgifter{" "}
               {nok(-averages.expenseExMortgage)} − ny termin
             </div>
           </div>
@@ -202,7 +204,7 @@ export const MortgagePage: FC<Props> = (
                 <td class="num">{nok(s.payment)}</td>
                 <td class="num">
                   {nok(
-                    averages.salary + averages.expenseExMortgage - s.payment,
+                    averages.income + averages.expenseExMortgage - s.payment,
                   )}
                 </td>
               </tr>
@@ -210,9 +212,10 @@ export const MortgagePage: FC<Props> = (
           </tbody>
         </table>
         <p class="muted small">
-          Andre utgifter = snitt av alle utgifter unntatt boliglån de siste 12
-          månedene, inkludert fellesutgifter. Sjekk at fellesutgiftene for den
-          nye leiligheten ikke er høyere enn dagens.
+          Inntekt = lønn, renter og refusjoner; engangsinntekter og salg av
+          sparing holdes utenfor. Andre utgifter = snitt av alle utgifter
+          unntatt boliglån de siste 12 månedene, inkludert fellesutgifter. Sjekk
+          at fellesutgiftene for den nye leiligheten ikke er høyere enn dagens.
         </p>
       </div>
 

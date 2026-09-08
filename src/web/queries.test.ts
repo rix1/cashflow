@@ -2,8 +2,11 @@ import { assertEquals } from "@std/assert";
 import { categorizeAll } from "../categorize/mod.ts";
 import { TEST_CONFIG, testDatabase } from "../db/testdb.ts";
 import {
+  averages,
   getTransaction,
+  heldOut,
   linkReimbursement,
+  monthlyFlows,
   reimbursementCandidates,
   upsertOverride,
 } from "./queries.ts";
@@ -50,4 +53,45 @@ Deno.test("a linked inflow takes the reimbursed expense's category and follows i
   row = getTransaction(db, 3)!;
   assertEquals([row.category_key, row.reimburses], ["people", null]);
   assertEquals(getTransaction(db, 1)!.reimbursed, 0);
+});
+
+Deno.test("operating income counts salary, not one-off inflows or unknown money in", () => {
+  const db = testDatabase([
+    {
+      merchant: "EMPLOYER",
+      date: "2026-01-10",
+      amount: 50000,
+      bank_type: "Lønn",
+    },
+    {
+      merchant: "SOMEONE",
+      date: "2026-01-12",
+      amount: 10000,
+      bank_type: "Giro",
+    },
+    { merchant: "MYSTERY IN", date: "2026-01-13", amount: 300 },
+    { merchant: "MYSTERY OUT", date: "2026-01-14", amount: -700 },
+    { merchant: "REMA 1000", date: "2026-01-15", amount: -1000 },
+  ]);
+  categorizeAll(db, TEST_CONFIG);
+  const p = { from: "2026-01", to: "2026-01" };
+  assertEquals(
+    db.prepare(`SELECT category_key FROM transactions ORDER BY id`).all<
+      { category_key: string }
+    >().map((r) => r.category_key),
+    [
+      "income:salary",
+      "income:other",
+      "uncategorized",
+      "uncategorized",
+      "groceries",
+    ],
+  );
+  const avg = averages(db, p);
+  assertEquals([avg.income, avg.expense, avg.net], [50000, -1700, 48300]);
+  assertEquals(monthlyFlows(db, p).map((f) => [f.income, f.expense]), [[
+    50000,
+    -1700,
+  ]]);
+  assertEquals(heldOut(db, p).otherIncome, { count: 1, sum: 10000 });
 });

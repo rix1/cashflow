@@ -73,9 +73,21 @@ function periodWhere(
   return { sql, params };
 }
 
-/** Income/expense classification used everywhere: uncategorized rows are split by sign. */
-const INCOME_EXPR =
-  `CASE WHEN c.kind = 'income' OR (t.category_key = 'uncategorized' AND t.amount > 0) THEN t.amount ELSE 0 END`;
+/**
+ * Operating view used by the overview and the loan what-if. Income is what
+ * arrives every month: salary, interest and employer refunds. "Annen
+ * inntekt" and unknown inflows stay out until they are linked as a
+ * reimbursement or given a category; unknown outflows count as spending.
+ * Both errors point the same way, so headroom is never overstated.
+ */
+export const OPERATING_INCOME_CATEGORIES = [
+  "income:salary",
+  "income:interest",
+  "income:refund",
+];
+const INCOME_EXPR = `CASE WHEN t.category_key IN (${
+  OPERATING_INCOME_CATEGORIES.map((k) => `'${k}'`).join(", ")
+}) THEN t.amount ELSE 0 END`;
 const EXPENSE_EXPR =
   `CASE WHEN (c.kind = 'expense' AND t.category_key != 'uncategorized') OR (t.category_key = 'uncategorized' AND t.amount < 0) THEN t.amount ELSE 0 END`;
 const SAVING_EXPR = `CASE WHEN c.kind = 'saving' THEN t.amount ELSE 0 END`;
@@ -465,8 +477,8 @@ export function mortgageByMonth(db: Database): MortgageMonth[] {
 
 export type Averages = {
   months: number;
+  /** Operating income per month; see OPERATING_INCOME_CATEGORIES. */
   income: number;
-  salary: number;
   expense: number;
   expenseExMortgage: number;
   mortgage: number;
@@ -480,7 +492,6 @@ export function averages(db: Database, p: Period): Averages {
   const row = db
     .prepare(
       `SELECT SUM(${INCOME_EXPR}) AS income, SUM(${EXPENSE_EXPR}) AS expense,
-              SUM(CASE WHEN t.category_key = 'income:salary' THEN t.amount ELSE 0 END) AS salary,
               SUM(CASE WHEN t.category_key = 'housing:mortgage' THEN t.amount ELSE 0 END) AS mortgage,
               SUM(${SAVING_EXPR}) AS saving
        FROM transactions t JOIN accounts a ON a.id = t.account_id JOIN categories c ON c.key = t.category_key
@@ -489,7 +500,6 @@ export function averages(db: Database, p: Period): Averages {
     .get<
       {
         income: number | null;
-        salary: number | null;
         expense: number | null;
         mortgage: number | null;
         saving: number | null;
@@ -502,13 +512,30 @@ export function averages(db: Database, p: Period): Averages {
   return {
     months,
     income,
-    salary: (row.salary ?? 0) / months,
     expense,
     expenseExMortgage: expense - mortgage,
     mortgage,
     saving: (row.saving ?? 0) / months,
     net: income + expense,
   };
+}
+
+export type HeldOut = {
+  /** "Annen inntekt": inflows not counted as operating income. */
+  otherIncome: { count: number; sum: number };
+};
+
+/** What the operating view leaves out in a period, so the page can say so. */
+export function heldOut(db: Database, p: Period): HeldOut {
+  const w = periodWhere(p);
+  const otherIncome = db
+    .prepare(
+      `SELECT COUNT(*) AS count, IFNULL(SUM(t.amount), 0) AS sum
+       FROM transactions t JOIN accounts a ON a.id = t.account_id
+       WHERE ${w.sql} AND t.category_key = 'income:other'`,
+    )
+    .get<{ count: number; sum: number }>(w.params)!;
+  return { otherIncome };
 }
 
 function monthsCount(from: string, to: string): number {

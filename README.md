@@ -98,6 +98,13 @@ into stable merchant keys so rules stay short.
    the UI live in the database and take priority.
 6. Everything else is `uncategorized` and appears in the review queue.
 
+**Operating view.** The overview and the loan what-if count salary, interest
+and employer refunds as income. "Annen inntekt" and unknown inflows stay out
+until they are linked as a reimbursement or given a category, unknown
+outflows count as spending, and moves to and from savings are neither. Both
+errors understate headroom rather than inflate it. The overview says what
+was held out.
+
 **Web UI** (`src/web/`) is Hono with server-rendered JSX and htmx, no build
 step. Chart.js and htmx load from cdnjs unless copies exist in
 `src/web/static/` (`htmx.min.js`, `chart.umd.min.js`). Merchant logos are

@@ -1,7 +1,13 @@
 import type { FC } from "hono/jsx";
 import { CATEGORY_BY_KEY } from "../../categorize/categories.ts";
 import { monthLabel, monthsBetween, nok, pct } from "../format.ts";
-import type { Averages, CategoryTotal, Gap, MonthlyFlow } from "../queries.ts";
+import type {
+  Averages,
+  CategoryTotal,
+  Gap,
+  HeldOut,
+  MonthlyFlow,
+} from "../queries.ts";
 import { ChartScript, Money, PeriodFilters } from "./layout.tsx";
 
 type Props = {
@@ -11,6 +17,7 @@ type Props = {
   owners: string[];
   flows: MonthlyFlow[];
   averages: Averages;
+  heldOut: HeldOut;
   topCategories: CategoryTotal[];
   gaps: Gap[];
   uncategorized: { count: number; sum: number };
@@ -24,6 +31,7 @@ export const Dashboard: FC<Props> = (
     owners,
     flows,
     averages,
+    heldOut,
     topCategories,
     gaps,
     uncategorized,
@@ -41,10 +49,11 @@ export const Dashboard: FC<Props> = (
     row.expense += f.expense;
     row.saving += f.saving;
   }
-  // Tiles use salary rather than all income so one-off inflows do not skew them.
-  const salaryNet = averages.salary + averages.expense;
-  const savingsRate = averages.salary > 0 ? salaryNet / averages.salary : null;
+  const savingsRate = averages.income > 0
+    ? averages.net / averages.income
+    : null;
   const ownerQuery = owner ? `&owner=${encodeURIComponent(owner)}` : "";
+  const periodQuery = `from=${from}&to=${to}${ownerQuery}`;
   const gapsInPeriod = gaps.filter((g) =>
     g.to >= `${from}-01` && g.from <= `${to}-31`
   );
@@ -105,9 +114,11 @@ export const Dashboard: FC<Props> = (
       )}
       <div class="tiles">
         <div class="tile">
-          <div class="label">Lønn / mnd</div>
-          <div class="value pos">{nok(averages.salary)}</div>
-          <div class="sub">snitt over {averages.months} mnd</div>
+          <div class="label">Inntekt / mnd</div>
+          <div class="value pos">{nok(averages.income)}</div>
+          <div class="sub">
+            lønn, renter og refusjoner · snitt over {averages.months} mnd
+          </div>
         </div>
         <div class="tile">
           <div class="label">Utgifter / mnd</div>
@@ -116,8 +127,8 @@ export const Dashboard: FC<Props> = (
         </div>
         <div class="tile">
           <div class="label">Netto / mnd</div>
-          <div class={`value ${salaryNet >= 0 ? "pos" : "neg"}`}>
-            {nok(salaryNet)}
+          <div class={`value ${averages.net >= 0 ? "pos" : "neg"}`}>
+            {nok(averages.net)}
           </div>
           <div class="sub">sparerate {pct(savingsRate)}</div>
         </div>
@@ -135,6 +146,13 @@ export const Dashboard: FC<Props> = (
           </div>
         </div>
       </div>
+      <p class="muted small">
+        Holdt utenfor driften: annen inntekt{" "}
+        <a href={`/transactions?category=income%3Aother&${periodQuery}`}>
+          {heldOut.otherIncome.count} poster, {nok(heldOut.otherIncome.sum)}
+        </a>. Sparing og overføringer mellom egne kontoer telles ikke som
+        inntekt eller utgift.
+      </p>
 
       <div class="card">
         <div class="chart">

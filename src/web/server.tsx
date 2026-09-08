@@ -90,6 +90,7 @@ export function createApp(dbPath?: string) {
           owners={q.getOwners(db)}
           flows={flows}
           averages={avg}
+          heldOut={q.heldOut(db, p)}
           topCategories={top}
           gaps={q.coverageGaps(db)}
           uncategorized={unc}
