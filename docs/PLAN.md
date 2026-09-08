@@ -120,3 +120,33 @@ Known limitations / next steps:
 - The mortgage what-if uses the last 12 months of household averages; it does
   not know about salary changes, the new apartment's fellesutgifter, or
   savings targets. Treat it as a floor.
+
+## Status 2026-09-08 (operating view)
+
+The March 2026 share sale and reimbursements from friends had inflated both
+income and expenses, so the overview and the loan what-if could not be
+trusted for "what does a bigger loan leave us". Changes:
+
+- The brokerage payout account is in accounts.json as a savings account, so
+  the sale is a savings withdrawal that nets against the deposit the same
+  day. No code change; the data page would have flagged it if the bank had
+  marked it as an own account.
+- Schema v3: overrides carry a reimbursement link and a one-off flag, the
+  category became optional, transactions mirror the flag. `openDatabase()`
+  migrates in place.
+- Reimbursement links: an inflow linked to an expense from the transaction
+  row takes that expense's category on every categorization run. The review
+  page lists every "Annen inntekt" row, since the two catch-all seed rules
+  are where one-offs land.
+- One income definition everywhere: operating income = salary, interest and
+  employer refunds. "Annen inntekt" and unknown inflows are held out and the
+  overview says so.
+- One-off flag: kept in the transaction list, left out of flows, averages,
+  category totals, merchant totals and recurring detection. "Typisk måned"
+  (median of monthly sums, empty months as 0) next to the mean on the
+  overview and the categories page.
+
+Still open: the two August 2026 inflows from a friend need linking to the
+expenses they covered (the data does not say which), April 2026 has 109
+uncategorized rows to clear before per-category averages are trusted, and
+budget targets per category remain Phase 4.
