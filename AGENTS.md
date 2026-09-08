@@ -43,7 +43,7 @@ with line-based string replacement; use token-level edits or edit by hand.
 ```
 src/main.ts                 CLI dispatcher (import, rebuild, categorize, serve)
 src/config.ts               accounts.json loader, account-number normalization, owner aliases
-src/db/schema.ts            SQLite DDL (schema v3)
+src/db/schema.ts            SQLite DDL (schema v4)
 src/db/db.ts                openDatabase(): WAL, foreign keys, busy timeout, v1 backup
 src/importers/encoding.ts   strict UTF-8, else ISO-8859-1
 src/importers/handelsbanken.ts, nordea.ts   bank readers (Importer interface)
@@ -90,20 +90,22 @@ src/web/static/             vendored htmx and Chart.js
   `EXPENSE_EXPR`, `SAVING_EXPR`). Income is operating income only
   (`OPERATING_INCOME_CATEGORIES`: salary, interest, employer refunds);
   `income:other` and positive uncategorized rows are held out, negative
-  uncategorized rows count as expense, saving and transfer kinds are excluded.
-  Every aggregate also filters `t.one_off = 0`. Keep every view consistent with
-  those expressions; the transaction list is the only place one-offs show.
-- **Overrides** (`overrides` table, keyed by fingerprint) hold three independent
-  manual decisions: `category_key`, `reimburses` (fingerprint of the expense an
-  inflow pays back) and `one_off`. Change them only through `upsertOverride()`
-  in `web/queries.ts`, which drops empty rows, and re-run `categorizeAll()`
-  afterwards: it mirrors `one_off` onto transactions and gives linked inflows
-  the expense's current category (source `reimbursement`) in a post-pass.
+  uncategorized rows count as expense, saving, transfer and outside kinds are
+  excluded. Every aggregate also filters `t.one_off = 0`. Keep every view
+  consistent with those expressions; the transaction list is the only place
+  one-offs show. Pass-through money (paid for others, paid back) belongs in the
+  `outside` kind, both directions in one category, so only its net shows.
+- **Overrides** (`overrides` table, keyed by fingerprint) hold two independent
+  manual decisions: `category_key` and `one_off`. Change them only through
+  `upsertOverride()` in `web/queries.ts`, which drops empty rows, and re-run
+  `categorizeAll()` afterwards: it mirrors `one_off` onto transactions in a
+  post-pass.
 - **Schema changes** bump `SCHEMA_VERSION` and add a step to `migrate()` in
   `db/db.ts`. `CREATE TABLE IF NOT EXISTS` never alters an existing table, so
   new columns need `ALTER TABLE` there, and relaxing a constraint means
-  rebuilding the table (see the v3 overrides step). `db.test.ts` runs the
-  migration against a v2-shaped file.
+  rebuilding the table (see the v2 overrides step), and dropping a column is
+  `ALTER TABLE ... DROP COLUMN` (the v3 step). `db.test.ts` runs the migration
+  against v2- and v3-shaped files.
 
 ## Adding things
 

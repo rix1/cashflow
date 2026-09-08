@@ -1,9 +1,10 @@
 /**
  * Bump when a table changes shape and add the matching step to migrate() in
- * db.ts. v3: overrides may carry a reimbursement link and a one-off flag
- * without a category; transactions mirror the one-off flag.
+ * db.ts. v3: overrides may carry a one-off flag without a category and
+ * transactions mirror it. v4: the short-lived reimbursement-link column on
+ * overrides is gone.
  */
-export const SCHEMA_VERSION = 3;
+export const SCHEMA_VERSION = 4;
 
 export const SCHEMA = `
 CREATE TABLE IF NOT EXISTS meta (
@@ -104,13 +105,11 @@ CREATE TABLE IF NOT EXISTS rules (
 );
 
 -- Manual decisions about one transaction, keyed by fingerprint so they
--- survive a rebuild. category_key: manual category. reimburses: fingerprint
--- of the expense this inflow pays back; the inflow then takes that expense's
--- category. one_off: keep out of averages and run-rate views.
+-- survive a rebuild. category_key: manual category. one_off: keep out of
+-- averages and run-rate views. Either may stand alone.
 CREATE TABLE IF NOT EXISTS overrides (
   fingerprint TEXT PRIMARY KEY,
   category_key TEXT REFERENCES categories(key),
-  reimburses TEXT,
   one_off INTEGER NOT NULL DEFAULT 0,
   note TEXT,
   updated_at TEXT NOT NULL DEFAULT (datetime('now'))

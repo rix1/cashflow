@@ -33,18 +33,25 @@ export function openDatabase(path = DB_PATH): Database {
  * open. CREATE TABLE IF NOT EXISTS in SCHEMA never alters existing tables.
  */
 function migrate(db: Database) {
-  const columns = (table: string) =>
-    db.prepare(`PRAGMA table_info(${table})`).all<{ name: string }>().map((
-      c,
-    ) => c.name);
-  if (!columns("transactions").includes("one_off")) {
+  const info = (table: string) =>
+    db.prepare(`PRAGMA table_info(${table})`).all<
+      { name: string; notnull: number }
+    >();
+  const has = (table: string, column: string) =>
+    info(table).some((c) => c.name === column);
+
+  if (!has("transactions", "one_off")) {
     db.exec(
       `ALTER TABLE transactions ADD COLUMN one_off INTEGER NOT NULL DEFAULT 0`,
     );
   }
-  if (!columns("overrides").includes("reimburses")) {
+
+  const overrides = info("overrides");
+  const categoryRequired =
+    overrides.find((c) => c.name === "category_key")?.notnull === 1;
+  if (categoryRequired) {
     // v2 had category_key NOT NULL; SQLite cannot relax that in place, so
-    // rebuild the table and copy the rows over.
+    // rebuild the table from SCHEMA and copy the rows over.
     db.transaction(() => {
       db.exec(`ALTER TABLE overrides RENAME TO overrides_v2`);
       db.exec(SCHEMA);
@@ -53,6 +60,15 @@ function migrate(db: Database) {
          SELECT fingerprint, category_key, note, updated_at FROM overrides_v2`,
       );
       db.exec(`DROP TABLE overrides_v2`);
+    })();
+  } else if (overrides.some((c) => c.name === "reimburses")) {
+    // v3 carried reimbursement links. Rows that held only a link are empty
+    // without it.
+    db.transaction(() => {
+      db.exec(`ALTER TABLE overrides DROP COLUMN reimburses`);
+      db.exec(
+        `DELETE FROM overrides WHERE category_key IS NULL AND one_off = 0`,
+      );
     })();
   }
 }
