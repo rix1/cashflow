@@ -116,6 +116,11 @@ form.filters .segmented label { flex-direction:row; gap:0; cursor:pointer; posit
 .segmented label:first-child span { border-radius:5px 0 0 5px } .segmented label:last-child span { border-radius:0 5px 5px 0 }
 .segmented input:checked + span { background:var(--accent); color:var(--card) }
 .segmented input:focus-visible + span { outline:2px solid var(--accent); outline-offset:3px }
+.segmented a { padding:8px 12px; line-height:20px; font-size:13px; color:var(--muted); text-decoration:none; white-space:nowrap }
+.segmented a:first-child { border-radius:5px 0 0 5px } .segmented a:last-child { border-radius:0 5px 5px 0 }
+.segmented a:hover { background:var(--soft); color:var(--fg) } .segmented a[aria-current] { background:var(--accent); color:var(--card) }
+.review-heading { align-items:center; margin-top:8px } .review-heading p { max-width:none }
+tr.pending td, tbody tr.pending:hover > td { background:var(--accent-soft) } .review-save:disabled { cursor:default }
 details.multi { position:relative }
 details.multi summary { position:relative; list-style:none; cursor:pointer; padding:8px 28px 8px 10px; border:1px solid var(--control); border-radius:var(--radius); background:var(--card); color:var(--fg); font-size:14px; line-height:20px; min-width:140px; max-width:240px; white-space:nowrap; overflow:hidden; text-overflow:ellipsis }
 details.multi summary::-webkit-details-marker { display:none } details.multi summary::after { content:"⌄"; position:absolute; right:10px; top:7px; color:var(--muted) }
@@ -385,9 +390,13 @@ document.addEventListener('htmx:afterSwap', e => {
   const next = document.getElementById(state.focus.id) || row?.querySelector('select');
   if (document.activeElement === document.body) next?.focus({ preventScroll: true });
 });
+document.addEventListener('announce', e => announce(e.detail.message, true));
 document.addEventListener('htmx:afterRequest', e => {
   const state = pending.get(e.detail.xhr);
-  if (!state) return;
+  if (!state) {
+    if (!e.detail.successful) announce('Endringen ble ikke lagret. Prøv igjen.');
+    return;
+  }
   if (e.detail.successful) announce('Endringen er lagret.', true);
   else {
     const select = document.getElementById(state.row)?.querySelector('select[data-saved-value]');
@@ -406,12 +415,13 @@ document.addEventListener('htmx:afterRequest', e => {
  * Norwegian collation. Group heads keep their place and sort the rows below
  * them; subtotal and spanning rows stay at the bottom. The original order is
  * remembered per table, and rows are looked up by id so htmx row swaps keep
- * working.
+ * working. Tables with an id keep their sort when htmx replaces them.
  */
 const SORT_SCRIPT = String.raw`(function(){
 const collator = new Intl.Collator('nb', { numeric: true, sensitivity: 'base' });
 const original = new WeakMap();
-const state = new WeakMap();
+const state = new Map();
+const stateKey = table => table.id || table;
 function text(cell) {
   if (cell.dataset.sort != null) return cell.dataset.sort;
   const select = cell.querySelector('select');
@@ -459,30 +469,41 @@ function apply(table, col, dir) {
   }
   table.tBodies[0].append(...out, ...tail);
 }
-for (const table of document.querySelectorAll('table:not([data-nosort])')) {
+function sortBy(table, th, dir) {
+  state.set(stateKey(table), { col: th.cellIndex, dir });
+  for (const cell of th.parentElement.cells) cell.removeAttribute('aria-sort');
+  if (dir) th.setAttribute('aria-sort', dir === 1 ? 'ascending' : 'descending');
+  apply(table, th.cellIndex, dir);
+}
+function setup(table) {
   const head = table.tHead && table.tHead.rows[0];
-  if (!head || !table.tBodies[0]) continue;
+  if (!head || !table.tBodies[0]) return;
   for (const th of head.cells) {
-    if (!th.textContent.trim()) continue;
+    if (!th.textContent.trim() || th.querySelector('.sort')) continue;
     const button = document.createElement('button');
     button.type = 'button';
     button.className = 'sort';
     button.append(...th.childNodes);
     th.append(button);
   }
+  const saved = state.get(stateKey(table));
+  if (saved && saved.dir && head.cells[saved.col]) sortBy(table, head.cells[saved.col], saved.dir);
 }
+const SORTABLE = 'table:not([data-nosort])';
+document.querySelectorAll(SORTABLE).forEach(setup);
+document.addEventListener('htmx:load', e => {
+  const elt = e.detail.elt;
+  if (!(elt instanceof Element)) return;
+  if (elt.matches(SORTABLE)) setup(elt);
+  else elt.querySelectorAll(SORTABLE).forEach(setup);
+});
 document.addEventListener('click', e => {
   const button = e.target.closest('th > .sort');
   if (!button) return;
   const th = button.parentElement;
   const table = th.closest('table');
-  const col = th.cellIndex;
-  const current = state.get(table) || {};
-  const dir = current.col !== col ? 1 : current.dir === 1 ? -1 : 0;
-  state.set(table, { col, dir });
-  for (const cell of th.parentElement.cells) cell.removeAttribute('aria-sort');
-  if (dir) th.setAttribute('aria-sort', dir === 1 ? 'ascending' : 'descending');
-  apply(table, col, dir);
+  const current = state.get(stateKey(table)) || {};
+  sortBy(table, th, current.col !== th.cellIndex ? 1 : current.dir === 1 ? -1 : 0);
 });
 })();`;
 

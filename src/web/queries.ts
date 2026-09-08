@@ -290,37 +290,81 @@ export type ReviewGroup = {
   owners: string;
 };
 
+/** `from` is a month; rows before its first day are left out. */
+export type ReviewFilter = { owner?: string; from?: string };
+
+/** Period presets on the review page, in display order. */
+export const REVIEW_PERIODS: [key: string, label: string][] = [
+  ["6m", "siste 6 mnd"],
+  ["year", "i år"],
+  ["12m", "siste 12 mnd"],
+  ["all", "alt"],
+];
+
+/** First month of a review period preset; undefined means no lower bound. */
+export function presetFrom(
+  preset: string | undefined,
+  today = new Date(),
+): string | undefined {
+  const month = `${today.getFullYear()}-${
+    String(today.getMonth() + 1).padStart(2, "0")
+  }`;
+  switch (preset) {
+    case "6m":
+      return addMonths(month, -6);
+    case "12m":
+      return addMonths(month, -12);
+    case "year":
+      return `${month.slice(0, 4)}-01`;
+    default:
+      return undefined;
+  }
+}
+
+function reviewWhere(
+  f: ReviewFilter,
+): { sql: string; params: Record<string, string> } {
+  const params: Record<string, string> = {};
+  let sql = `t.category_key = 'uncategorized'`;
+  if (f.owner) {
+    sql += ` AND a.owner = :owner`;
+    params.owner = f.owner;
+  }
+  if (f.from) {
+    sql += ` AND t.date >= :from`;
+    params.from = `${f.from}-01`;
+  }
+  return { sql, params };
+}
+
 export function reviewQueue(
   db: Database,
-  owner?: string,
+  filter: ReviewFilter = {},
   limit = 150,
 ): ReviewGroup[] {
-  const params: Record<string, string | number> = { limit };
-  let ownerSql = "";
-  if (owner) {
-    ownerSql = `AND a.owner = :owner`;
-    params.owner = owner;
-  }
+  const w = reviewWhere(filter);
   return db
     .prepare(
       `SELECT t.merchant, COUNT(*) AS count, SUM(t.amount) AS sum, MIN(t.date) AS first, MAX(t.date) AS last,
               MIN(t.description) AS sample, GROUP_CONCAT(DISTINCT a.owner) AS owners
        FROM transactions t JOIN accounts a ON a.id = t.account_id
-       WHERE t.category_key = 'uncategorized' ${ownerSql}
+       WHERE ${w.sql}
        GROUP BY t.merchant ORDER BY ABS(SUM(t.amount)) DESC LIMIT :limit`,
     )
-    .all<ReviewGroup>(params);
+    .all<ReviewGroup>({ ...w.params, limit });
 }
 
 export function uncategorizedStats(
   db: Database,
+  filter: ReviewFilter = {},
 ): { count: number; sum: number; merchants: number } {
+  const w = reviewWhere(filter);
   return db
     .prepare(
-      `SELECT COUNT(*) AS count, IFNULL(SUM(amount), 0) AS sum, COUNT(DISTINCT merchant) AS merchants
-       FROM transactions WHERE category_key = 'uncategorized'`,
+      `SELECT COUNT(*) AS count, IFNULL(SUM(t.amount), 0) AS sum, COUNT(DISTINCT t.merchant) AS merchants
+       FROM transactions t JOIN accounts a ON a.id = t.account_id WHERE ${w.sql}`,
     )
-    .get<{ count: number; sum: number; merchants: number }>()!;
+    .get<{ count: number; sum: number; merchants: number }>(w.params)!;
 }
 
 export type RecurringFilter = {

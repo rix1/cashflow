@@ -19,7 +19,13 @@ import { CategoriesPage } from "./views/categories.tsx";
 import { FixedPage } from "./views/fixed.tsx";
 import { MortgagePage } from "./views/mortgage.tsx";
 import { TransactionsPage, TxTableRow } from "./views/transactions.tsx";
-import { ReviewPage } from "./views/review.tsx";
+import {
+  OtherIncome,
+  ReviewPage,
+  type ReviewProps,
+  ReviewQueue,
+  reviewUrl,
+} from "./views/review.tsx";
 import { RulesPage } from "./views/rules.tsx";
 import { DataPage } from "./views/data.tsx";
 import { VendorPage, VendorsPage } from "./views/vendors.tsx";
@@ -331,32 +337,52 @@ export function createApp(dbPath?: string) {
     return c.html(<TxTableRow tx={q.getTransaction(db, id)!} />);
   });
 
+  const reviewProps = (
+    ownerParam: string | undefined,
+    periodParam: string | undefined,
+  ): ReviewProps => {
+    const owner = ownerParam || undefined;
+    const period = q.REVIEW_PERIODS.some(([key]) => key === periodParam)
+      ? periodParam!
+      : "all";
+    const filter = { owner, from: q.presetFrom(period) };
+    return {
+      groups: q.reviewQueue(db, filter),
+      stats: q.uncategorizedStats(db, filter),
+      otherIncome: q.listTransactions(db, {
+        category: ["income:other"],
+        owner: owner ? [owner] : undefined,
+        from: filter.from,
+        pageSize: 100,
+      }).rows,
+      owner,
+      period,
+      owners: q.getOwners(db),
+    };
+  };
+
   app.get("/review", (c) => {
-    const owner = c.req.query("owner") || undefined;
-    const otherIncome = q.listTransactions(db, {
-      category: ["income:other"],
-      owner: owner ? [owner] : undefined,
-      pageSize: 100,
-    }).rows;
+    const props = reviewProps(c.req.query("owner"), c.req.query("period"));
     return c.html(
       <Layout title="Gjennomgang" active="/review" assets={assets}>
-        <ReviewPage
-          groups={q.reviewQueue(db, owner)}
-          stats={q.uncategorizedStats(db)}
-          otherIncome={otherIncome}
-          owner={owner}
-          owners={q.getOwners(db)}
-        />
+        <ReviewPage {...props} />
       </Layout>,
     );
   });
 
-  app.post("/review/rule", async (c) => {
-    const body = await c.req.parseBody();
-    const merchant = String(body["merchant"] ?? "").trim();
-    const category = String(body["category_key"] ?? "");
-    const owner = String(body["owner"] ?? "");
-    if (merchant && category && category !== "uncategorized") {
+  /** One rule per row whose category was chosen; the rest are left alone. */
+  app.post("/review/rules", async (c) => {
+    const body = await c.req.formData();
+    const merchants = body.getAll("merchant").map(String);
+    const categories = body.getAll("category_key").map(String);
+    let saved = 0;
+    merchants.forEach((raw, i) => {
+      const merchant = raw.trim();
+      const category = categories[i] ?? "";
+      if (
+        !merchant || !category || category === "uncategorized" ||
+        !CATEGORY_BY_KEY.has(category)
+      ) return;
       q.createRule(db, {
         name: `Mottaker: ${merchant}`,
         field: "merchant",
@@ -364,10 +390,26 @@ export function createApp(dbPath?: string) {
         category_key: category,
         priority: USER_PRIORITY_DEFAULT,
       });
-      categorizeAll(db, config);
+      saved++;
+    });
+    if (saved > 0) categorizeAll(db, config);
+    const owner = String(body.get("owner") ?? "");
+    const period = String(body.get("period") ?? "");
+    if (!c.req.header("HX-Request")) {
+      return c.redirect(reviewUrl(owner || undefined, period || "all"));
     }
-    return c.redirect(
-      `/review${owner ? `?owner=${encodeURIComponent(owner)}` : ""}`,
+    const message = saved === 0
+      ? "Ingen regler å lagre."
+      : saved === 1
+      ? "1 regel lagret."
+      : `${saved} regler lagret.`;
+    c.header("HX-Trigger", JSON.stringify({ announce: { message } }));
+    const props = reviewProps(owner, period);
+    return c.html(
+      <>
+        <ReviewQueue {...props} />
+        <OtherIncome rows={props.otherIncome} oob />
+      </>,
     );
   });
 

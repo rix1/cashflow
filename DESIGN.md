@@ -117,8 +117,11 @@ semantic variables so a future dark theme can replace surfaces and ink.
   must not look successful. Preserve the inline reset action.
 - **Details:** use native `details`; quiet description summary, inset wrapping
   text when open. Never truncate the expanded bank description or message.
-- **Review:** consistent select/action placement, explicit “Lagre regel”, label
-  each select with its merchant, and show a useful completion state when empty.
+- **Review:** period presets as a segmented set of links, one form for the whole
+  queue, each select labeled with its merchant. Changed rows get a pale teal
+  fill and are counted in the “Lagre N regler” button (disabled at zero). Saving
+  swaps the queue in place, keeps the sort, and announces the result in the
+  status region. Show a useful completion state when empty.
 - **Callout:** amber text label and pale warm fill with a slim rule. Explain the
   gap and link to the next action. Do not use red for missing data.
 - **Mortgage:** keep inputs, result and sensitivity together; highlight the

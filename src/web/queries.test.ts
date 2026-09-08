@@ -8,10 +8,54 @@ import {
   heldOut,
   listTransactions,
   monthlyFlows,
+  presetFrom,
+  reviewQueue,
   setOneOff,
   setOverride,
+  uncategorizedStats,
   vendorList,
 } from "./queries.ts";
+
+Deno.test("review period presets resolve to a first month", () => {
+  const today = new Date(2026, 8, 8);
+  assertEquals(presetFrom("6m", today), "2026-03");
+  assertEquals(presetFrom("12m", today), "2025-09");
+  assertEquals(presetFrom("year", today), "2026-01");
+  assertEquals(presetFrom("all", today), undefined);
+  assertEquals(presetFrom(undefined, today), undefined);
+});
+
+Deno.test("review queue and its stats follow the owner and period filters", () => {
+  const db = testDatabase([
+    { merchant: "MYSTERY OLD", date: "2025-01-05", amount: -900 },
+    {
+      merchant: "MYSTERY NEW",
+      date: "2026-03-05",
+      amount: -200,
+      account: "3333",
+    },
+    { merchant: "MYSTERY NEW", date: "2026-04-05", amount: -300 },
+  ]);
+  categorizeAll(db, TEST_CONFIG);
+  assertEquals(
+    reviewQueue(db).map((g) => [g.merchant, g.count, g.sum]),
+    [["MYSTERY OLD", 1, -900], ["MYSTERY NEW", 2, -500]],
+  );
+  assertEquals(
+    reviewQueue(db, { from: "2026-01" }).map((g) => [g.merchant, g.count]),
+    [["MYSTERY NEW", 2]],
+  );
+  assertEquals(
+    reviewQueue(db, { owner: "bob" }).map((g) => [g.merchant, g.sum]),
+    [["MYSTERY NEW", -200]],
+  );
+  assertEquals(uncategorizedStats(db), { count: 3, sum: -1400, merchants: 2 });
+  assertEquals(uncategorizedStats(db, { from: "2026-01", owner: "alice" }), {
+    count: 1,
+    sum: -300,
+    merchants: 1,
+  });
+});
 
 Deno.test("operating income counts salary, not one-off inflows or unknown money in", () => {
   const db = testDatabase([
