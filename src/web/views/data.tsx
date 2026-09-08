@@ -74,6 +74,13 @@ export const DataPage: FC<Props> = ({ accounts, imports, gaps, unknown }) => (
           </tr>
         </thead>
         <tbody>
+          {accounts.length === 0 && (
+            <tr>
+              <td colspan={8} class="empty-state">
+                Ingen kontoer importert ennå. Se importveiledningen øverst.
+              </td>
+            </tr>
+          )}
           {accounts.map((a) => (
             <tr>
               <td>{a.owner}</td>
@@ -116,6 +123,14 @@ export const DataPage: FC<Props> = ({ accounts, imports, gaps, unknown }) => (
           </tr>
         </thead>
         <tbody>
+          {imports.length === 0 && (
+            <tr>
+              <td colspan={13} class="empty-state">
+                Ingen filer importert ennå. Legg til kontoutskrifter for å se
+                avstemmingen.
+              </td>
+            </tr>
+          )}
           {imports.map((i) => {
             const diff = i.opening_balance != null && i.closing_balance != null
               ? i.opening_balance + (i.period_sum ?? 0) - i.closing_balance

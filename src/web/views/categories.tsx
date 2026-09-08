@@ -38,7 +38,7 @@ export const CategoriesPage: FC<Props> = (
     type: "bar",
     data: {
       labels: months.map(monthLabel),
-      datasets: expenseGroups.map((g, i) => ({
+      datasets: expenseGroups.map((g) => ({
         label: g.group,
         data: months.map((m) =>
           Math.round(
@@ -48,7 +48,7 @@ export const CategoriesPage: FC<Props> = (
             ),
           )
         ),
-        backgroundColor: PALETTE[i % PALETTE.length],
+        backgroundColor: PALETTE[GROUP_ORDER.indexOf(g.group) % PALETTE.length],
       })),
     },
     options: {
@@ -70,13 +70,30 @@ export const CategoriesPage: FC<Props> = (
         action="/categories"
       />
       <div class="card">
+        <div class="section-heading">
+          <h2>Utgifter etter gruppe</h2>
+          <span class="muted small">Per måned · kr</span>
+        </div>
         <div class="chart">
-          <canvas id="cat-chart"></canvas>
+          <canvas
+            id="cat-chart"
+            role="img"
+            aria-label="Utgifter etter gruppe per måned. Tallene finnes i kategoritabellen nedenfor."
+          >
+          </canvas>
         </div>
         <ChartScript id="cat-chart" config={chart} />
       </div>
-      <div class="tablewrap">
-        <table>
+      <p class="muted small">
+        {MEDIAN_HINT} Rull sidelengs for å se flere måneder.
+      </p>
+      <div
+        class="tablewrap category-scroll"
+        tabindex={0}
+        role="region"
+        aria-label="Kategorier per måned, rullbar tabell"
+      >
+        <table class="category-grid">
           <thead>
             <tr>
               <th>Kategori</th>
@@ -87,6 +104,13 @@ export const CategoriesPage: FC<Props> = (
             </tr>
           </thead>
           <tbody>
+            {groups.length === 0 && (
+              <tr>
+                <td colspan={months.length + 4} class="empty-state">
+                  Ingen kategoriserte transaksjoner i perioden.
+                </td>
+              </tr>
+            )}
             {groups.map((g) => {
               const groupMonth = (m: string) =>
                 g.categories.reduce(
@@ -125,7 +149,7 @@ export const CategoriesPage: FC<Props> = (
                         const v = lookup.get(`${c.key}|${m}`);
                         return (
                           <td class="num">
-                            {v
+                            {v != null
                               ? (
                                 <a
                                   class="cell"
@@ -136,7 +160,14 @@ export const CategoriesPage: FC<Props> = (
                                   {nok(v)}
                                 </a>
                               )
-                              : <span class="muted">·</span>}
+                              : (
+                                <span
+                                  class="muted"
+                                  aria-label="Ingen transaksjoner"
+                                >
+                                  –
+                                </span>
+                              )}
                           </td>
                         );
                       })}

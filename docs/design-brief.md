@@ -1,5 +1,37 @@
 # Design brief: Cashflow UI
 
+## Implementation revision · 2026-09-08
+
+Reviewed and rebased against `b2571dc`, including operating income (`7e70f26`),
+one-offs and medians (`3a0b50a`), and pass-through money (`e2b3e94`).
+The visual constraints below still apply. `DESIGN.md` records the chosen system.
+
+- Dashboard headline: operating income minus expenses per month. Tiles, chart,
+  tables and mortgage headroom share this definition: salary, interest and
+  employer refunds. Explain the basis without inventing a second income total.
+- Preserve the held-out summary and links for other income, one-offs and the
+  `Utenfor` group. Keep one-off controls and filter visible in transaction rows.
+- Preserve typical-month medians alongside averages and explain that empty
+  months count as zero. Review includes a second queue for other income.
+- Include **Mottakere** (`/vendors`) and merchant detail pages: logos, period
+  averages, sparklines, trends and their transaction tables are established UI.
+- `/fixed` is **Abonnementer** in navigation and also covers other recurring
+  costs. Preserve search, kind, cadence and inactive filters.
+- Transactions use an all/in/out direction control and checkbox multi-selects
+  for category, owner and account. Preserve repeated query parameters, keyboard
+  operation and `from`/`to` dates. Do not reintroduce a separate month filter.
+- Subscription totals distinguish actual spending over 12 months from justified
+  cadence estimates. Preserve those labels, subtotal rows and mortgage input
+  precision. Schema v4 keeps category and one-off overrides independent.
+- Chart.js and htmx are already vendored. Add no remote fonts or dependencies.
+  Existing logo requests remain as documented in the README.
+- Use synthetic data for implementation proofs, screenshots and interaction
+  checks. Do not copy or modify the main worktree's private database.
+
+Implementation sequence: record the system; apply shared CSS/navigation and
+chart defaults; prove dashboard and transaction interactions; finish dense-grid,
+review and mortgage details; verify all routes at laptop and phone widths.
+
 You are designing the visual language for **Cashflow**, a local, private
 household-finance tool used by two partners a few times a year and in bursts
 around big decisions (right now: sizing a larger mortgage for a new
@@ -48,6 +80,7 @@ Time box: one to two days. Decisions over polish.
 | ----------------------- | ------------------------------------------------------------------- | -------------------------------------------------------- |
 | Oversikt (dashboard)    | Monthly income vs expenses, net, savings rate, top categories, gaps | KPI tiles, one bar+line chart, two tables                |
 | Kategorier              | Category x month grid, 12+ month columns                            | Very dense table with group subtotals, horizontal scroll |
+| Mottakere               | Merchant totals, period averages, trends and drill-down              | Dense table, logos, sparklines, detail chart             |
 | Faste kostnader         | Recurring payments, monthly equivalent, active/inactive             | Table with tiles on top                                  |
 | Boliglån                | Interest vs principal per term, what-if form for a new loan         | Form + result tiles + stacked bar chart + tables         |
 | Transaksjoner           | 200-row table, filters, inline category select per row (htmx)       | The workhorse; controls inside table rows                |

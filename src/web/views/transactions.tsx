@@ -42,12 +42,14 @@ const OneOffToggle: FC<{ tx: TxRow }> = ({ tx }) =>
           engangs
         </span>
         <button
+          id={`tx-oneoff-${tx.id}`}
           type="button"
           class="secondary small"
           hx-post={`/transactions/${tx.id}/oneoff`}
           hx-vals='{"one_off": "0"}'
           {...swapRow(tx)}
           title="Ta med i snitt og totaler igjen"
+          aria-label={`Ta med ${tx.merchant} i snitt og totaler igjen`}
         >
           ×
         </button>
@@ -55,12 +57,14 @@ const OneOffToggle: FC<{ tx: TxRow }> = ({ tx }) =>
     )
     : (
       <button
+        id={`tx-oneoff-${tx.id}`}
         type="button"
         class="secondary small"
         hx-post={`/transactions/${tx.id}/oneoff`}
         hx-vals='{"one_off": "1"}'
         {...swapRow(tx)}
         title="Engangspost: hold utenfor snitt og totaler"
+        aria-label={`Merk ${tx.merchant} som engangspost`}
       >
         engangs
       </button>
@@ -81,8 +85,10 @@ export const TxTableHead: FC = () => (
 export const TxTableRow: FC<{ tx: TxRow }> = ({ tx }) => (
   <tr id={`tx-${tx.id}`} class={tx.one_off ? "oneoff" : ""}>
     <td class="nowrap">{tx.date}</td>
-    <td class="nowrap small">
-      {tx.owner} · {tx.bank}
+    <td class="small">
+      <span class="nowrap">{tx.owner}</span>
+      <br />
+      <span class="muted">{tx.bank}</span>
     </td>
     <td class="desc">
       <a href={`/vendors/${encodeURIComponent(tx.merchant)}`}>
@@ -110,6 +116,9 @@ export const TxTableRow: FC<{ tx: TxRow }> = ({ tx }) => (
           name="category_key"
           value={tx.category_key}
           attrs={{
+            id: `tx-category-${tx.id}`,
+            "aria-label": `Kategori for ${tx.merchant}`,
+            "data-saved-value": tx.category_key,
             "hx-post": `/transactions/${tx.id}/category`,
             "hx-trigger": "change",
             "hx-target": `#tx-${tx.id}`,
@@ -119,6 +128,7 @@ export const TxTableRow: FC<{ tx: TxRow }> = ({ tx }) => (
         <SourceBadge source={tx.category_source} />
         {tx.category_source === "manual" && (
           <button
+            id={`tx-reset-${tx.id}`}
             type="button"
             class="secondary small"
             hx-post={`/transactions/${tx.id}/category`}
@@ -126,6 +136,7 @@ export const TxTableRow: FC<{ tx: TxRow }> = ({ tx }) => (
             hx-target={`#tx-${tx.id}`}
             hx-swap="outerHTML"
             title="Fjern manuell overstyring"
+            aria-label={`Fjern manuell kategori for ${tx.merchant}`}
           >
             ×
           </button>
@@ -168,6 +179,10 @@ export const TransactionsPage: FC<Props> = (
   return (
     <>
       <h1>Transaksjoner</h1>
+      <p class="muted">
+        Finn en betaling, juster kategorien eller merk en engangspost. Beløp i
+        kroner.
+      </p>
       <form class="filters" method="get" action="/transactions">
         <label>
           Søk
@@ -180,7 +195,7 @@ export const TransactionsPage: FC<Props> = (
         </label>
         <div class="field">
           <span>Retning</span>
-          <div class="segmented">
+          <div class="segmented" role="group" aria-label="Retning">
             {DIRECTIONS.map(([value, label]) => (
               <label>
                 <input
@@ -198,6 +213,7 @@ export const TransactionsPage: FC<Props> = (
           <span>Kategori</span>
           <MultiSelect
             name="category"
+            label="Kategori"
             groups={categoryOptions().map((g) => ({
               label: g.group,
               options: g.categories.map((c) => ({
@@ -212,6 +228,7 @@ export const TransactionsPage: FC<Props> = (
           <span>Hvem</span>
           <MultiSelect
             name="owner"
+            label="Hvem"
             groups={[{ options: owners.map((o) => ({ value: o, label: o })) }]}
             selected={filters.owner}
             emptyLabel="husholdning"
@@ -221,6 +238,7 @@ export const TransactionsPage: FC<Props> = (
           <span>Konto</span>
           <MultiSelect
             name="account"
+            label="Konto"
             groups={[{
               options: accounts.filter((a) => a.tx_count > 0).map((a) => ({
                 value: String(a.id),
@@ -276,20 +294,35 @@ export const TransactionsPage: FC<Props> = (
           </>
         )}
       </p>
-      <div class="tablewrap">
-        <table>
+      <div
+        class="tablewrap"
+        tabindex={0}
+        role="region"
+        aria-label="Transaksjoner, rullbar tabell"
+      >
+        <table class="transactions-table">
           <TxTableHead />
-          <tbody>{rows.map((tx) => <TxTableRow tx={tx} />)}</tbody>
+          <tbody>
+            {rows.length === 0 && (
+              <tr>
+                <td colspan={5} class="empty-state">
+                  <strong>Ingen transaksjoner i utvalget</strong>Prøv en annen
+                  periode eller <a href="/transactions">nullstill filtrene</a>.
+                </td>
+              </tr>
+            )}
+            {rows.map((tx) => <TxTableRow tx={tx} />)}
+          </tbody>
         </table>
       </div>
       {pages > 1 && (
-        <div class="pager">
+        <nav class="pager" aria-label="Sider med transaksjoner">
           {page > 1 && <a href={query(page - 1)}>← forrige</a>}
           <span class="muted">
             side {page} av {pages}
           </span>
           {page < pages && <a href={query(page + 1)}>neste →</a>}
-        </div>
+        </nav>
       )}
     </>
   );

@@ -7,7 +7,7 @@ import {
   NORWEGIAN_INTEREST_DEDUCTION,
 } from "../mortgage.ts";
 import type { Averages, LoanMonth, MortgageMonth } from "../queries.ts";
-import { ChartScript } from "./layout.tsx";
+import { CHART_COLORS, ChartScript, PALETTE } from "./layout.tsx";
 
 type Props = {
   loanMonths: LoanMonth[];
@@ -50,17 +50,17 @@ export const MortgagePage: FC<Props> = (
         {
           label: "Renter",
           data: loanMonths.map((m) => Math.round(m.interest)),
-          backgroundColor: "#b3402f",
+          backgroundColor: CHART_COLORS.expense,
         },
         {
           label: "Avdrag",
           data: loanMonths.map((m) => Math.round(m.principal)),
-          backgroundColor: "#2f5d8a",
+          backgroundColor: CHART_COLORS.income,
         },
         {
           label: "Gebyr",
           data: loanMonths.map((m) => Math.round(m.fees)),
-          backgroundColor: "#a1660f",
+          backgroundColor: PALETTE[3],
         },
       ],
     },
@@ -178,7 +178,7 @@ export const MortgagePage: FC<Props> = (
             </div>
             <div class="sub">per måned mot dagens {nok(currentMortgage)}</div>
           </div>
-          <div class="tile">
+          <div class="tile primary">
             <div class="label">Igjen per mnd med nytt lån</div>
             <div class={`value ${headroomNew >= 0 ? "pos" : "neg"}`}>
               {nok(headroomNew)}
@@ -199,8 +199,14 @@ export const MortgagePage: FC<Props> = (
           </thead>
           <tbody>
             {sensitivity.map((s) => (
-              <tr>
-                <td>{s.rate.toFixed(1)} %</td>
+              <tr class={s.rate === whatIf.rate ? "selected-rate" : ""}>
+                <td>
+                  {s.rate.toLocaleString("nb-NO", { maximumFractionDigits: 2 })}
+                  {" "}
+                  %{s.rate === whatIf.rate && (
+                    <span class="small">&nbsp;· valgt rente</span>
+                  )}
+                </td>
                 <td class="num">{nok(s.payment)}</td>
                 <td class="num">
                   {nok(
@@ -223,7 +229,12 @@ export const MortgagePage: FC<Props> = (
       <h2>Renter og avdrag per termin</h2>
       <div class="card">
         <div class="chart">
-          <canvas id="loan-chart"></canvas>
+          <canvas
+            id="loan-chart"
+            role="img"
+            aria-label="Renter, avdrag og gebyr per termin. Tallene finnes i tabellen nedenfor."
+          >
+          </canvas>
         </div>
         <ChartScript id="loan-chart" config={chart} />
       </div>

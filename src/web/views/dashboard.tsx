@@ -8,7 +8,13 @@ import type {
   HeldOut,
   MonthlyFlow,
 } from "../queries.ts";
-import { ChartScript, MEDIAN_HINT, Money, PeriodFilters } from "./layout.tsx";
+import {
+  CHART_COLORS,
+  ChartScript,
+  MEDIAN_HINT,
+  Money,
+  PeriodFilters,
+} from "./layout.tsx";
 
 type Props = {
   from: string;
@@ -66,12 +72,12 @@ export const Dashboard: FC<Props> = (
         {
           label: "Inntekt",
           data: months.map((m) => Math.round(byMonth.get(m)!.income)),
-          backgroundColor: "#2f7d4f",
+          backgroundColor: CHART_COLORS.income,
         },
         {
           label: "Utgifter",
           data: months.map((m) => Math.round(-byMonth.get(m)!.expense)),
-          backgroundColor: "#b3402f",
+          backgroundColor: CHART_COLORS.expense,
         },
         {
           label: "Netto",
@@ -79,8 +85,8 @@ export const Dashboard: FC<Props> = (
           data: months.map((m) =>
             Math.round(byMonth.get(m)!.income + byMonth.get(m)!.expense)
           ),
-          borderColor: "#2f5d8a",
-          backgroundColor: "#2f5d8a",
+          borderColor: CHART_COLORS.net,
+          backgroundColor: CHART_COLORS.net,
           tension: 0.2,
         },
       ],
@@ -89,13 +95,15 @@ export const Dashboard: FC<Props> = (
       responsive: true,
       maintainAspectRatio: false,
       plugins: { legend: { position: "bottom" } },
-      scales: { y: { ticks: { callback: "__nok__" } } },
     },
   };
 
   return (
     <>
       <h1>Oversikt {owner ? `· ${owner}` : "· husholdning"}</h1>
+      <p class="muted">
+        Inntekter, utgifter og rommet imellom. Alle beløp i kroner.
+      </p>
       <PeriodFilters
         from={from}
         to={to}
@@ -112,39 +120,44 @@ export const Dashboard: FC<Props> = (
           <a href="/data">Detaljer</a>
         </div>
       )}
-      <div class="tiles">
+      <div class="tiles dashboard-tiles">
+        <div class="tile primary">
+          <div class="label">Igjen etter utgifter / mnd</div>
+          <div class={`value ${averages.net < 0 ? "neg" : ""}`}>
+            {nok(averages.net)}
+          </div>
+          <div class="sub">
+            inntekt minus utgifter · sparerate {pct(savingsRate)}
+          </div>
+        </div>
         <div class="tile">
           <div class="label">Inntekt / mnd</div>
-          <div class="value pos">{nok(averages.income)}</div>
+          <div class="value">{nok(averages.income)}</div>
           <div class="sub">
             lønn, renter og refusjoner · snitt over {averages.months} mnd
           </div>
         </div>
         <div class="tile">
           <div class="label">Utgifter / mnd</div>
-          <div class="value neg">{nok(-averages.expense)}</div>
+          <div class="value">{nok(-averages.expense)}</div>
           <div class="sub">hvorav boliglån {nok(-averages.mortgage)}</div>
-        </div>
-        <div class="tile">
-          <div class="label">Netto / mnd</div>
-          <div class={`value ${averages.net >= 0 ? "pos" : "neg"}`}>
-            {nok(averages.net)}
-          </div>
-          <div class="sub">sparerate {pct(savingsRate)}</div>
         </div>
         <div class="tile">
           <div class="label">Til sparing / mnd</div>
           <div class="value">{nok(-averages.saving)}</div>
           <div class="sub">netto flyttet til sparekontoer</div>
         </div>
-        <div class="tile">
-          <div class="label">Ukategorisert</div>
-          <div class="value warn">{nok(uncategorized.sum)}</div>
-          <div class="sub">
-            {uncategorized.count} transaksjoner ·{" "}
-            <a href={`/review${owner ? `?owner=${owner}` : ""}`}>gå gjennom</a>
-          </div>
-        </div>
+      </div>
+      <div class="review-note">
+        <span>
+          {uncategorized.count} ukategoriserte transaksjoner ·{" "}
+          {nok(uncategorized.sum)} kr
+        </span>
+        <a
+          href={`/review${owner ? `?owner=${encodeURIComponent(owner)}` : ""}`}
+        >
+          Gå til gjennomgang →
+        </a>
       </div>
       <p class="muted small">
         Holdt utenfor driften: annen inntekt{" "}
@@ -163,10 +176,30 @@ export const Dashboard: FC<Props> = (
       </p>
 
       <div class="card">
-        <div class="chart">
-          <canvas id="flow-chart"></canvas>
+        <div class="section-heading">
+          <h2>Inntekter og utgifter</h2>
+          <span class="muted small">Per måned · kr</span>
         </div>
-        <ChartScript id="flow-chart" config={chart} />
+        {flows.length === 0
+          ? (
+            <p class="empty-state">
+              Ingen transaksjoner i perioden.{" "}
+              <a href="/data">Se data og import</a>.
+            </p>
+          )
+          : (
+            <>
+              <div class="chart">
+                <canvas
+                  id="flow-chart"
+                  role="img"
+                  aria-label="Inntekt, utgifter og netto per måned. Tallene står i tabellen Per måned nedenfor."
+                >
+                </canvas>
+              </div>
+              <ChartScript id="flow-chart" config={chart} />
+            </>
+          )}
       </div>
 
       <div class="grid2">
@@ -219,6 +252,7 @@ export const Dashboard: FC<Props> = (
         </div>
         <div>
           <h2>Største utgiftskategorier</h2>
+          <p class="muted small">{MEDIAN_HINT}</p>
           <div class="tablewrap">
             <table>
               <thead>
@@ -231,6 +265,13 @@ export const Dashboard: FC<Props> = (
                 </tr>
               </thead>
               <tbody>
+                {topCategories.length === 0 && (
+                  <tr>
+                    <td colspan={5} class="empty-state">
+                      Ingen utgifter i perioden.
+                    </td>
+                  </tr>
+                )}
                 {topCategories.map((c) => (
                   <tr>
                     <td>

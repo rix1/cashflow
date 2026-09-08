@@ -1,5 +1,18 @@
 # Design handoff
 
+Implementation started 2026-09-08 in a leased Treehouse worktree on
+`web/design-system`, rebased onto `b2571dc`. The brief has been reconciled with
+operating income, one-offs, medians, pass-through money and transaction filters.
+
+- `../../DESIGN.md`: chosen Paper ledger system and implementation checklist.
+- `research.md`: six reference notes and the alternative direction.
+- `directions.svg`: side-by-side direction frames with invented figures.
+- `verification.md`: implementation scope, validation results and local preview.
+- `proof/`: verified dashboard and transaction screenshots using synthetic data.
+- The dashboard and transactions page serve as the implemented proof frames.
+  Use synthetic data for new screenshots; the older `current-ui/` images are
+  private and must not be copied into deliverables.
+
 Inputs for the UI/UX pass, meant to be dropped into a Claude Design project
 or handed to a designer as-is.
 
