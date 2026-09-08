@@ -118,7 +118,7 @@ export const MortgagePage: FC<Props> = (
               type="number"
               name="amount"
               value={String(whatIf.amount)}
-              step="100000"
+              step="1000"
               min="0"
             />
           </label>
@@ -128,7 +128,7 @@ export const MortgagePage: FC<Props> = (
               type="number"
               name="rate"
               value={String(whatIf.rate)}
-              step="0.1"
+              step="0.01"
               min="0"
             />
           </label>
@@ -149,7 +149,7 @@ export const MortgagePage: FC<Props> = (
               type="number"
               name="currentRate"
               value={String(whatIf.currentRate)}
-              step="0.1"
+              step="0.01"
               min="0"
             />
           </label>
