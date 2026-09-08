@@ -342,28 +342,92 @@ export const ChartScript: FC<{ id: string; config: unknown }> = (
 ) => (
   <script
     dangerouslySetInnerHTML={{
-      __html: `(function(){var cfg=${
-        JSON.stringify(config)
-      };function draw(){if(!window.Chart){document.getElementById(${
-        JSON.stringify(id)
-      }).insertAdjacentHTML('afterend','<p class="muted small">Chart.js ble ikke lastet (ingen nett?). Tabellene under viser samme tall.</p>');return;}new Chart(document.getElementById(${
-        JSON.stringify(id)
-      }),cfg);}if(document.readyState==='loading'){document.addEventListener('DOMContentLoaded',draw);}else{draw();}})();`,
+      __html: `(function(){const id=${JSON.stringify(id)};const cfg=${
+        JSON.stringify(config).replaceAll("<", "\\u003c")
+      };${CHART_SCRIPT}})();`,
     }}
   />
 );
 
+const CHART_SCRIPT = `
+function draw() {
+  const canvas = document.getElementById(id);
+  if (!canvas) return;
+  function fallback(message) {
+    canvas.hidden = true;
+    canvas.parentElement.classList.add('unavailable');
+    const note = document.createElement('p');
+    note.className = 'muted small';
+    note.textContent = message;
+    canvas.after(note);
+  }
+  if (!window.Chart) {
+    fallback('Diagrammet er utilgjengelig. Tallene finnes i tabellene nedenfor.');
+    return;
+  }
+  if (!cfg.data.datasets.length || !cfg.data.datasets.some(d => d.data.length)) {
+    fallback('Ingen tall å vise i diagrammet for denne perioden.');
+    return;
+  }
+  const styles = getComputedStyle(document.documentElement);
+  const token = name => styles.getPropertyValue(name).trim();
+  const color = value => typeof value === 'string' && value.startsWith('var(')
+    ? token(value.slice(4, -1)) : value;
+  const number = new Intl.NumberFormat('nb-NO', { maximumFractionDigits: 0 });
+  Chart.defaults.font.family = token('--font');
+  Chart.defaults.font.size = 12;
+  Chart.defaults.color = token('--muted');
+  Chart.defaults.animation = false;
+  cfg.data.datasets.forEach(d => {
+    d.backgroundColor = color(d.backgroundColor);
+    d.borderColor = color(d.borderColor);
+    d.pointStyle = d.type === 'line' ? 'line' : 'rectRounded';
+    if (d.type === 'line') {
+      d.borderWidth = 2;
+      d.pointRadius ??= 2;
+    } else {
+      d.borderRadius = 3;
+      d.maxBarThickness = 32;
+    }
+  });
+  const opts = cfg.options ||= {};
+  opts.locale = 'nb-NO';
+  opts.interaction = { mode: 'index', intersect: false };
+  opts.plugins ||= {};
+  opts.plugins.legend = {
+    position: 'bottom', align: 'start',
+    labels: { usePointStyle: true, boxWidth: 10, boxHeight: 8, padding: 20 }
+  };
+  opts.plugins.tooltip = {
+    backgroundColor: token('--fg'), padding: 12, cornerRadius: 6,
+    callbacks: { label: c => c.dataset.label + ': ' + number.format(c.parsed.y) + ' kr' }
+  };
+  opts.scales ||= {};
+  opts.scales.x = { ...opts.scales.x, grid: { display: false }, border: { display: false }, ticks: { maxRotation: 0 } };
+  opts.scales.y = { ...opts.scales.y, border: { display: false },
+    grid: { color: token('--line'), drawTicks: false },
+    ticks: { padding: 12, callback: value => number.format(value) }
+  };
+  new Chart(canvas, cfg);
+}
+if (document.readyState === 'loading') document.addEventListener('DOMContentLoaded', draw);
+else draw();
+`;
+
+export const CHART_COLORS = {
+  income: "var(--chart-income)",
+  expense: "var(--chart-expense)",
+  net: "var(--chart-net)",
+};
+
 export const PALETTE = [
-  "#2f5d8a",
-  "#b3402f",
-  "#2f7d4f",
-  "#a1660f",
-  "#6a4c93",
-  "#1b998b",
-  "#c1666b",
-  "#4f6d7a",
-  "#8c7851",
-  "#3d5a80",
-  "#e07a5f",
-  "#81b29a",
+  "var(--chart-1)",
+  "var(--chart-2)",
+  "var(--chart-3)",
+  "var(--chart-4)",
+  "var(--chart-5)",
+  "var(--chart-6)",
+  "var(--chart-7)",
+  "var(--chart-8)",
+  "var(--chart-9)",
 ];

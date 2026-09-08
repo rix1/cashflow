@@ -10,7 +10,13 @@ import {
   sparklineTrend,
   yearlyTrendPct,
 } from "../stats.ts";
-import { CategoryName, ChartScript, Money, OwnerSelect } from "./layout.tsx";
+import {
+  CategoryName,
+  CHART_COLORS,
+  ChartScript,
+  Money,
+  OwnerSelect,
+} from "./layout.tsx";
 import { TxTableRow } from "./transactions.tsx";
 import { Logo } from "./logo.tsx";
 
@@ -28,7 +34,7 @@ const Sparkline: FC<{ values: number[] }> = ({ values }) => {
         <polyline
           points={trend}
           fill="none"
-          stroke="#2f5d8a"
+          stroke="var(--accent)"
           stroke-width="1"
           stroke-dasharray="3 2"
           opacity="0.7"
@@ -221,13 +227,15 @@ export const VendorPage: FC<DetailProps> = (
         {
           label: vendor.sum < 0 ? "Utgift per måned" : "Beløp per måned",
           data: mags.map((v) => Math.round(v)),
-          backgroundColor: vendor.sum < 0 ? "#b3402f" : "#2f7d4f",
+          backgroundColor: vendor.sum < 0
+            ? CHART_COLORS.expense
+            : CHART_COLORS.income,
         },
         {
           label: "Trend",
           type: "line",
           data: trendLine,
-          borderColor: "#2f5d8a",
+          borderColor: CHART_COLORS.net,
           borderDash: [4, 3],
           pointRadius: 0,
           tension: 0,
@@ -301,7 +309,12 @@ export const VendorPage: FC<DetailProps> = (
       </div>
       <div class="card">
         <div class="chart">
-          <canvas id="vendor-chart"></canvas>
+          <canvas
+            id="vendor-chart"
+            role="img"
+            aria-label="Beløp og trend per måned. Tallene finnes i tabellene nedenfor."
+          >
+          </canvas>
         </div>
         <ChartScript id="vendor-chart" config={chart} />
       </div>
