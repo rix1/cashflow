@@ -80,10 +80,10 @@ export const ReviewPage: FC<Props> = (
     <p class="muted">
       {otherIncome.length}{" "}
       innbetalinger traff samlereglene for giro og innkommende overføring og ble
-      «Annen inntekt», som ikke teller som inntekt i oversikten. Koble hver til
-      utgiften den betaler tilbake, så havner den i samme kategori som utgiften;
-      sett riktig kategori; eller merk den som engangs så den holdes utenfor
-      alle snitt.
+      «Annen inntekt», som ikke teller som inntekt i oversikten. Penger andre
+      betaler tilbake hører hjemme i «Utlegg for andre» sammen med det du la ut
+      for dem; ellers sett riktig kategori, eller merk posten som engangs så den
+      holdes utenfor alle snitt.
     </p>
     <div class="tablewrap">
       <table>

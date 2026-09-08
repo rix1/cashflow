@@ -212,10 +212,11 @@ export const MortgagePage: FC<Props> = (
           </tbody>
         </table>
         <p class="muted small">
-          Inntekt = lønn, renter og refusjoner; engangsinntekter og salg av
-          sparing holdes utenfor. Andre utgifter = snitt av alle utgifter
-          unntatt boliglån de siste 12 månedene, inkludert fellesutgifter. Sjekk
-          at fellesutgiftene for den nye leiligheten ikke er høyere enn dagens.
+          Inntekt = lønn, renter og refusjoner; engangsinntekter, salg av
+          sparing og utlegg for andre holdes utenfor. Andre utgifter = snitt av
+          alle utgifter unntatt boliglån de siste 12 månedene, inkludert
+          fellesutgifter. Sjekk at fellesutgiftene for den nye leiligheten ikke
+          er høyere enn dagens.
         </p>
       </div>
 

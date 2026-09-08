@@ -154,6 +154,10 @@ export const Dashboard: FC<Props> = (
         · engangsposter{" "}
         <a href={`/transactions?oneoff=1&${periodQuery}`}>
           {heldOut.oneOff.count} poster, {nok(heldOut.oneOff.sum)}
+        </a>{" "}
+        · utlegg for andre og annet utenfor{" "}
+        <a href={`/transactions?group=Utenfor&${periodQuery}`}>
+          {heldOut.outside.count} poster, netto {nok(heldOut.outside.sum)}
         </a>. Sparing og overføringer mellom egne kontoer telles ikke som
         inntekt eller utgift.
       </p>

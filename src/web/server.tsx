@@ -1,6 +1,7 @@
 import { Hono } from "hono";
 import { serveStatic } from "hono/deno";
 import { existsSync } from "@std/fs";
+import { CATEGORY_BY_KEY } from "../categorize/categories.ts";
 import { loadConfig } from "../config.ts";
 import { openDatabase } from "../db/db.ts";
 import {
@@ -17,11 +18,7 @@ import { Dashboard } from "./views/dashboard.tsx";
 import { CategoriesPage } from "./views/categories.tsx";
 import { FixedPage } from "./views/fixed.tsx";
 import { MortgagePage } from "./views/mortgage.tsx";
-import {
-  ReimbursePicker,
-  TransactionsPage,
-  TxTableRow,
-} from "./views/transactions.tsx";
+import { TransactionsPage, TxTableRow } from "./views/transactions.tsx";
 import { ReviewPage } from "./views/review.tsx";
 import { RulesPage } from "./views/rules.tsx";
 import { DataPage } from "./views/data.tsx";
@@ -63,13 +60,9 @@ export function createApp(dbPath?: string) {
     const p = period(c);
     const flows = q.monthlyFlows(db, p);
     const avg = q.averages(db, p);
+    // Spending only: saving, transfer and outside kinds have negative sums too.
     const totals = q.categoryTotals(db, p).filter((t) =>
-      ![
-        "transfer:own",
-        "transfer:partner",
-        "loans:disbursement",
-        "loans:payoff",
-      ].includes(t.category_key)
+      (CATEGORY_BY_KEY.get(t.category_key)?.kind ?? "expense") === "expense"
     );
     const medians = medianByKey(
       q.categoryByMonth(db, p).map((c) => ({
@@ -334,31 +327,6 @@ export function createApp(dbPath?: string) {
     if (!tx) return c.text("not found", 404);
     const body = await c.req.parseBody();
     q.setOneOff(db, tx.fingerprint, String(body["one_off"] ?? "") === "1");
-    categorizeAll(db, config);
-    return c.html(<TxTableRow tx={q.getTransaction(db, id)!} />);
-  });
-
-  app.get("/transactions/:id/reimburse", (c) => {
-    const tx = q.getTransaction(db, Number(c.req.param("id")));
-    if (!tx) return c.text("not found", 404);
-    return c.html(
-      <ReimbursePicker
-        tx={tx}
-        candidates={q.reimbursementCandidates(db, tx)}
-      />,
-    );
-  });
-
-  app.post("/transactions/:id/reimburse", async (c) => {
-    const id = Number(c.req.param("id"));
-    const tx = q.getTransaction(db, id);
-    if (!tx) return c.text("not found", 404);
-    const body = await c.req.parseBody();
-    q.linkReimbursement(
-      db,
-      tx.fingerprint,
-      String(body["expense"] ?? "") || null,
-    );
     categorizeAll(db, config);
     return c.html(<TxTableRow tx={q.getTransaction(db, id)!} />);
   });

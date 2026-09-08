@@ -108,21 +108,6 @@ function applyOneOffs(db: Database) {
   );
 }
 
-/**
- * An inflow linked to an expense takes that expense's category, whatever
- * rule or override decided it, so the two net out in the same place. Runs
- * after the per-row pass so the expense's category is final.
- */
-function applyReimbursements(db: Database) {
-  db.exec(
-    `UPDATE transactions
-     SET category_key = (SELECT e.category_key FROM overrides o JOIN transactions e ON e.fingerprint = o.reimburses
-                         WHERE o.fingerprint = transactions.fingerprint),
-         category_source = 'reimbursement'
-     WHERE fingerprint IN (SELECT o.fingerprint FROM overrides o JOIN transactions e ON e.fingerprint = o.reimburses)`,
-  );
-}
-
 export type CategorizeStats = {
   total: number;
   uncategorized: number;
@@ -158,7 +143,6 @@ export function categorizeAll(db: Database, config: Config): CategorizeStats {
   })();
   update.finalize();
   applyOneOffs(db);
-  applyReimbursements(db);
   const transfersLinked = linkTransfers(db);
 
   const byCategory = db

@@ -32,7 +32,7 @@ export const CategoriesPage: FC<Props> = (
   })).filter((g) => g.categories.length > 0);
 
   const expenseGroups = groups.filter((g) =>
-    !["Inntekt", "Sparing", "Overføringer"].includes(g.group)
+    !["Inntekt", "Sparing", "Overføringer", "Utenfor"].includes(g.group)
   );
   const chart = {
     type: "bar",

@@ -76,9 +76,11 @@ function periodWhere(
 /**
  * Operating view used by the overview and the loan what-if. Income is what
  * arrives every month: salary, interest and employer refunds. "Annen
- * inntekt" and unknown inflows stay out until they are linked as a
- * reimbursement or given a category; unknown outflows count as spending.
- * Both errors point the same way, so headroom is never overstated.
+ * inntekt" and unknown inflows stay out until they are given a category;
+ * unknown outflows count as spending. Both errors point the same way, so
+ * headroom is never overstated. Saving, transfer and outside kinds are
+ * neither: outside is money that passes through (paid for others, paid
+ * back), reported only as a net.
  *
  * Every aggregate in this file also leaves out rows flagged as one-offs
  * (t.one_off = 0); the transaction list is the only place that shows them.
@@ -196,26 +198,15 @@ export type TxRow = {
   bank: string;
   account_name: string;
   note: string | null;
-  /** Fingerprint of the expense this inflow pays back, with its details. */
-  reimburses: string | null;
-  reimburses_date: string | null;
-  reimburses_merchant: string | null;
-  reimburses_amount: number | null;
-  /** Inflows linked to this expense, as a positive sum. */
-  reimbursed: number;
 };
 
 const TX_SELECT =
   `SELECT t.id, t.fingerprint, t.date, t.amount, t.currency, t.original_amount, t.original_currency, t.description, t.merchant,
           t.counterparty, t.bank_type, t.bank_subtype, t.message, t.category_key, t.category_source, t.transfer_group, t.one_off,
-          a.owner, a.bank, a.name AS account_name, o.note, o.reimburses,
-          e.date AS reimburses_date, e.merchant AS reimburses_merchant, e.amount AS reimburses_amount,
-          IFNULL((SELECT SUM(r.amount) FROM overrides ro JOIN transactions r ON r.fingerprint = ro.fingerprint
-                  WHERE ro.reimburses = t.fingerprint), 0) AS reimbursed`;
+          a.owner, a.bank, a.name AS account_name, o.note`;
 const TX_JOINS =
   `FROM transactions t JOIN accounts a ON a.id = t.account_id JOIN categories c ON c.key = t.category_key
-   LEFT JOIN overrides o ON o.fingerprint = t.fingerprint
-   LEFT JOIN transactions e ON e.fingerprint = o.reimburses`;
+   LEFT JOIN overrides o ON o.fingerprint = t.fingerprint`;
 
 export function listTransactions(
   db: Database,
@@ -282,53 +273,6 @@ export function getTransaction(db: Database, id: number): TxRow | undefined {
   return db
     .prepare(`${TX_SELECT} ${TX_JOINS} WHERE t.id = :id`)
     .get<TxRow>({ id });
-}
-
-export type ReimbursementCandidate = {
-  id: number;
-  fingerprint: string;
-  date: string;
-  merchant: string;
-  amount: number;
-  category_key: string;
-  owner: string;
-};
-
-/** Expenses an inflow could be paying back: the 180 days before it, newest first. */
-export function reimbursementCandidates(
-  db: Database,
-  inflow: Pick<TxRow, "date">,
-  limit = 150,
-): ReimbursementCandidate[] {
-  return db
-    .prepare(
-      `SELECT t.id, t.fingerprint, t.date, t.merchant, t.amount, t.category_key, a.owner
-       FROM transactions t JOIN accounts a ON a.id = t.account_id JOIN categories c ON c.key = t.category_key
-       WHERE c.kind = 'expense' AND t.amount < 0 AND t.date <= :to AND t.date >= date(:to, '-180 days')
-       ORDER BY t.date DESC, ABS(t.amount) DESC LIMIT :limit`,
-    )
-    .all<ReimbursementCandidate>({ to: inflow.date, limit });
-}
-
-/**
- * Marks an inflow as paying back an expense (null unlinks). The inflow's
- * category is derived from the expense on every categorization run.
- */
-export function linkReimbursement(
-  db: Database,
-  inflowFingerprint: string,
-  expenseFingerprint: string | null,
-) {
-  if (expenseFingerprint) {
-    const expense = db
-      .prepare(`SELECT amount FROM transactions WHERE fingerprint = :fp`)
-      .get<{ amount: number }>({ fp: expenseFingerprint });
-    if (!expense) throw new Error("Unknown expense");
-    if (expense.amount >= 0) {
-      throw new Error("A reimbursement must point at an expense");
-    }
-  }
-  upsertOverride(db, inflowFingerprint, { reimburses: expenseFingerprint });
 }
 
 /** Flags a transaction as a one-off (or not): kept in the list, out of every average. */
@@ -536,6 +480,8 @@ export type HeldOut = {
   otherIncome: { count: number; sum: number };
   /** Rows flagged as one-offs, left out of every aggregate. */
   oneOff: { count: number; sum: number };
+  /** Outside kind: pass-through money; the sum is its net. */
+  outside: { count: number; sum: number };
 };
 
 /** What the operating view leaves out in a period, so the page can say so. */
@@ -545,13 +491,14 @@ export function heldOut(db: Database, p: Period): HeldOut {
     db
       .prepare(
         `SELECT COUNT(*) AS count, IFNULL(SUM(t.amount), 0) AS sum
-         FROM transactions t JOIN accounts a ON a.id = t.account_id
+         FROM transactions t JOIN accounts a ON a.id = t.account_id JOIN categories c ON c.key = t.category_key
          WHERE ${w.sql} AND ${condition}`,
       )
       .get<{ count: number; sum: number }>(w.params)!;
   return {
     otherIncome: count(`t.category_key = 'income:other' AND t.one_off = 0`),
     oneOff: count(`t.one_off = 1`),
+    outside: count(`c.kind = 'outside' AND t.one_off = 0`),
   };
 }
 
@@ -710,14 +657,12 @@ export function deleteRule(db: Database, id: number) {
 
 export type OverridePatch = {
   category_key?: string | null;
-  reimburses?: string | null;
   one_off?: boolean;
   note?: string | null;
 };
 
 export type OverrideRow = {
   category_key: string | null;
-  reimburses: string | null;
   one_off: number;
   note: string | null;
 };
@@ -728,7 +673,7 @@ export function getOverride(
 ): OverrideRow | undefined {
   return db
     .prepare(
-      `SELECT category_key, reimburses, one_off, note FROM overrides WHERE fingerprint = :fp`,
+      `SELECT category_key, one_off, note FROM overrides WHERE fingerprint = :fp`,
     )
     .get<OverrideRow>({ fp: fingerprint });
 }
@@ -751,32 +696,27 @@ export function upsertOverride(
     next === undefined ? prev : next;
   const row = {
     category: pick(patch.category_key, current?.category_key ?? null),
-    reimburses: pick(patch.reimburses, current?.reimburses ?? null),
     one_off: patch.one_off === undefined
       ? current?.one_off ?? 0
       : (patch.one_off ? 1 : 0),
     note: pick(patch.note, current?.note ?? null),
   };
-  if (!row.category && !row.reimburses && !row.one_off) {
+  if (!row.category && !row.one_off) {
     db.exec(`DELETE FROM overrides WHERE fingerprint = :fp`, {
       fp: fingerprint,
     });
     return;
   }
   db.exec(
-    `INSERT INTO overrides(fingerprint, category_key, reimburses, one_off, note)
-     VALUES (:fp, :category, :reimburses, :one_off, :note)
-     ON CONFLICT(fingerprint) DO UPDATE SET category_key = excluded.category_key, reimburses = excluded.reimburses,
+    `INSERT INTO overrides(fingerprint, category_key, one_off, note)
+     VALUES (:fp, :category, :one_off, :note)
+     ON CONFLICT(fingerprint) DO UPDATE SET category_key = excluded.category_key,
        one_off = excluded.one_off, note = excluded.note, updated_at = datetime('now')`,
     { fp: fingerprint, ...row },
   );
 }
 
-/**
- * Manual category for one transaction; null clears it. Either way any
- * reimbursement link goes: a chosen category replaces the derived one, and
- * clearing means "back to the rules".
- */
+/** Manual category for one transaction; null means "back to the rules". */
 export function setOverride(
   db: Database,
   fingerprint: string,
@@ -785,7 +725,6 @@ export function setOverride(
 ) {
   upsertOverride(db, fingerprint, {
     category_key,
-    reimburses: null,
     ...(note === undefined ? {} : { note }),
   });
 }
@@ -841,7 +780,7 @@ export function vendorList(
     .prepare(
       `SELECT t.merchant, substr(t.date, 1, 7) AS month, t.category_key, a.owner, SUM(t.amount) AS sum, COUNT(*) AS count, MIN(t.date) AS first, MAX(t.date) AS last
        FROM transactions t JOIN accounts a ON a.id = t.account_id JOIN categories c ON c.key = t.category_key
-       WHERE ${w.sql} AND t.one_off = 0 AND c.kind NOT IN ('transfer', 'saving') ${extra}
+       WHERE ${w.sql} AND t.one_off = 0 AND c.kind NOT IN ('transfer', 'saving', 'outside') ${extra}
        GROUP BY 1, 2, 3, 4`,
     )
     .all<VendorCell>(params);

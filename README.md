@@ -84,9 +84,7 @@ into stable merchant keys so rules stay short.
 **Categorization** (`src/categorize/`) is layered, first match wins:
 
 1. Manual decisions made in the UI, keyed by fingerprint so they survive
-   rebuilds: a category override, or a reimbursement link that gives an
-   inflow the category of the expense it pays back, so the two net out in
-   the same place instead of inflating income.
+   rebuilds: a category override, or a one-off flag.
 2. Bank signals: salary, loan repayment, fees, interest, cash.
 3. Transfers: counterparty account in `accounts.json`, or counterparty name
    matching an owner alias. Own-to-own transfers, partner transfers, savings
@@ -100,9 +98,13 @@ into stable merchant keys so rules stay short.
 
 **Operating view.** The overview and the loan what-if count salary, interest
 and employer refunds as income. "Annen inntekt" and unknown inflows stay out
-until they are linked as a reimbursement or given a category, unknown
-outflows count as spending, and moves to and from savings are neither. Both
-errors understate headroom rather than inflate it. A transaction flagged as a
+until they are given a category, unknown outflows count as spending, and
+moves to and from savings are neither. Both errors understate headroom rather
+than inflate it. Money that only passes through, such as a bill paid for
+friends and what they send back, goes in the "Utenfor" group (`outside`
+kind): both directions in the same category, counted as neither income nor
+expense, with the group's net shown so your own share stays visible. A
+transaction flagged as a
 one-off in the UI stays in the transaction list but leaves every average,
 category total, merchant total and the recurring detector. The overview says
 what was held out, and shows a "typical month" (the median of the monthly

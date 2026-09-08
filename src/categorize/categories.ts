@@ -1,4 +1,15 @@
-export type CategoryKind = "income" | "expense" | "saving" | "transfer";
+/**
+ * Kind drives the totals: income and expense are the household's own money,
+ * saving and transfer move it between own accounts, and outside is money that
+ * passes through (paid for others, paid back by others). Outside rows are
+ * neither income nor expense; only their net is reported.
+ */
+export type CategoryKind =
+  | "income"
+  | "expense"
+  | "saving"
+  | "transfer"
+  | "outside";
 
 export type Category = {
   key: string;
@@ -73,6 +84,12 @@ export const CATEGORIES: Category[] = [
     "transfer",
   ),
 
+  // Both directions go in the same category: the purchase made for someone
+  // else and the money they sent back. Whatever does not net out is the
+  // household's own share, shown as the group's net.
+  c("outside:others", "Utlegg for andre", "Utenfor", "outside"),
+  c("outside:other", "Annet utenfor driften", "Utenfor", "outside"),
+
   c("uncategorized", "Ukategorisert", "Ukategorisert", "expense"),
 ];
 
@@ -87,5 +104,6 @@ export const GROUP_ORDER = [
   "Variabelt",
   "Sparing",
   "Overføringer",
+  "Utenfor",
   "Ukategorisert",
 ];

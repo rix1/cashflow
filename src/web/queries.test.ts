@@ -6,58 +6,12 @@ import {
   categoryTotals,
   getTransaction,
   heldOut,
-  linkReimbursement,
   listTransactions,
   monthlyFlows,
-  reimbursementCandidates,
   setOneOff,
-  upsertOverride,
+  setOverride,
   vendorList,
 } from "./queries.ts";
-
-Deno.test("a linked inflow takes the reimbursed expense's category and follows it", () => {
-  const db = testDatabase([
-    { merchant: "AIRBNB", date: "2026-07-07", amount: -18000 },
-    { merchant: "OLD RECEIPT", date: "2025-12-01", amount: -500 },
-    {
-      merchant: "FRIEND",
-      date: "2026-08-24",
-      amount: 20000,
-      bank_type: "Straksinnbetaling",
-    },
-  ]);
-  upsertOverride(db, "fp0", { category_key: "travel" });
-  categorizeAll(db, TEST_CONFIG);
-  const inflow = getTransaction(db, 3)!;
-  assertEquals(inflow.category_key, "people");
-  // Candidates: expenses in the half year before the inflow only.
-  assertEquals(
-    reimbursementCandidates(db, inflow).map((c) => c.fingerprint),
-    ["fp0"],
-  );
-
-  linkReimbursement(db, inflow.fingerprint, "fp0");
-  categorizeAll(db, TEST_CONFIG);
-  let row = getTransaction(db, 3)!;
-  assertEquals([row.category_key, row.category_source], [
-    "travel",
-    "reimbursement",
-  ]);
-  assertEquals(row.reimburses_merchant, "AIRBNB");
-  assertEquals(getTransaction(db, 1)!.reimbursed, 20000);
-
-  // The expense moves category; the inflow follows on the next run.
-  upsertOverride(db, "fp0", { category_key: "gifts" });
-  categorizeAll(db, TEST_CONFIG);
-  assertEquals(getTransaction(db, 3)!.category_key, "gifts");
-
-  // Unlinking hands the inflow back to the rules.
-  linkReimbursement(db, inflow.fingerprint, null);
-  categorizeAll(db, TEST_CONFIG);
-  row = getTransaction(db, 3)!;
-  assertEquals([row.category_key, row.reimburses], ["people", null]);
-  assertEquals(getTransaction(db, 1)!.reimbursed, 0);
-});
 
 Deno.test("operating income counts salary, not one-off inflows or unknown money in", () => {
   const db = testDatabase([
@@ -98,6 +52,51 @@ Deno.test("operating income counts salary, not one-off inflows or unknown money 
     -1700,
   ]]);
   assertEquals(heldOut(db, p).otherIncome, { count: 1, sum: 10000 });
+});
+
+Deno.test("outside rows are neither income nor expense; only their net is reported", () => {
+  const db = testDatabase([
+    {
+      merchant: "EMPLOYER",
+      date: "2026-01-10",
+      amount: 50000,
+      bank_type: "Lønn",
+    },
+    { merchant: "AIRBNB", date: "2026-01-07", amount: -18000 },
+    {
+      merchant: "FRIEND",
+      date: "2026-01-20",
+      amount: 12000,
+      bank_type: "Straksinnbetaling",
+    },
+    { merchant: "REMA 1000", date: "2026-01-15", amount: -1000 },
+  ]);
+  categorizeAll(db, TEST_CONFIG);
+  const p = { from: "2026-01", to: "2026-01" };
+  // As categorized by the rules: the trip is spending and the friend's money
+  // shrinks "people", so expenses net to -7000 in the wrong places.
+  assertEquals(averages(db, p).expense, -7000);
+
+  setOverride(db, "fp1", "outside:others");
+  setOverride(db, "fp2", "outside:others");
+  categorizeAll(db, TEST_CONFIG);
+  const avg = averages(db, p);
+  assertEquals([avg.income, avg.expense], [50000, -1000]);
+  // The household's own share of the trip is what is left as the net.
+  assertEquals(heldOut(db, p).outside, { count: 2, sum: -6000 });
+  assertEquals(
+    categoryTotals(db, p).find((c) => c.category_key === "outside:others")?.sum,
+    -6000,
+  );
+  const merchants = vendorList(db, p).rows.map((r) => r.merchant);
+  assertEquals(
+    merchants.includes("AIRBNB") || merchants.includes("FRIEND"),
+    false,
+  );
+  assertEquals(
+    listTransactions(db, { group: "Utenfor" }).rows.map((r) => r.id),
+    [3, 2],
+  );
 });
 
 Deno.test("a one-off stays in the list but out of every average", () => {
