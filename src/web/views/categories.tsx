@@ -2,7 +2,8 @@ import type { FC } from "hono/jsx";
 import { CATEGORIES, GROUP_ORDER } from "../../categorize/categories.ts";
 import { monthLabel, monthsBetween, nok } from "../format.ts";
 import type { CategoryMonth } from "../queries.ts";
-import { ChartScript, PALETTE, PeriodFilters } from "./layout.tsx";
+import { median } from "../stats.ts";
+import { ChartScript, MEDIAN_HINT, PALETTE, PeriodFilters } from "./layout.tsx";
 
 type Props = {
   from: string;
@@ -82,6 +83,7 @@ export const CategoriesPage: FC<Props> = (
               {months.map((m) => <th class="num">{monthLabel(m)}</th>)}
               <th class="num">Totalt</th>
               <th class="num">Snitt</th>
+              <th class="num" title={MEDIAN_HINT}>Typisk</th>
             </tr>
           </thead>
           <tbody>
@@ -104,6 +106,9 @@ export const CategoriesPage: FC<Props> = (
                     ))}
                     <td class="num">{nok(groupTotal)}</td>
                     <td class="num">{nok(groupTotal / months.length)}</td>
+                    <td class="num" title={MEDIAN_HINT}>
+                      {nok(median(months.map(groupMonth)))}
+                    </td>
                   </tr>
                   {g.categories.map((c) => (
                     <tr>
@@ -138,6 +143,13 @@ export const CategoriesPage: FC<Props> = (
                       <td class="num">{nok(totals.get(c.key) ?? 0)}</td>
                       <td class="num">
                         {nok((totals.get(c.key) ?? 0) / months.length)}
+                      </td>
+                      <td class="num" title={MEDIAN_HINT}>
+                        {nok(
+                          median(
+                            months.map((m) => lookup.get(`${c.key}|${m}`) ?? 0),
+                          ),
+                        )}
                       </td>
                     </tr>
                   ))}

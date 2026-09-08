@@ -48,6 +48,40 @@ export function yearlyTrendPct(monthly: number[]): number | null {
   return ((t.slope * 12) / mean) * 100;
 }
 
+/** Median of the values; 0 for an empty list. */
+export function median(values: number[]): number {
+  if (values.length === 0) return 0;
+  const sorted = [...values].sort((a, b) => a - b);
+  const mid = Math.floor(sorted.length / 2);
+  return sorted.length % 2 ? sorted[mid] : (sorted[mid - 1] + sorted[mid]) / 2;
+}
+
+/**
+ * Median monthly sum per key over the given months. A month without a row
+ * counts as 0, so something bought in two months out of twelve has a
+ * typical month of nothing, which is the point of showing it next to the
+ * mean.
+ */
+export function medianByKey(
+  cells: { key: string; month: string; sum: number }[],
+  months: string[],
+): Map<string, number> {
+  const byKey = new Map<string, Map<string, number>>();
+  for (const c of cells) {
+    let perMonth = byKey.get(c.key);
+    if (!perMonth) {
+      perMonth = new Map();
+      byKey.set(c.key, perMonth);
+    }
+    perMonth.set(c.month, (perMonth.get(c.month) ?? 0) + c.sum);
+  }
+  const out = new Map<string, number>();
+  for (const [key, perMonth] of byKey) {
+    out.set(key, median(months.map((m) => perMonth.get(m) ?? 0)));
+  }
+  return out;
+}
+
 export type Averages = {
   days: number;
   weekly: number;

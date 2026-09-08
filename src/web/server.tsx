@@ -9,8 +9,9 @@ import {
   syncSeedData,
   USER_PRIORITY_DEFAULT,
 } from "../categorize/mod.ts";
-import { isMonth } from "./format.ts";
+import { isMonth, monthsBetween } from "./format.ts";
 import * as q from "./queries.ts";
+import { medianByKey } from "./stats.ts";
 import { type Assets, Layout } from "./views/layout.tsx";
 import { Dashboard } from "./views/dashboard.tsx";
 import { CategoriesPage } from "./views/categories.tsx";
@@ -70,7 +71,18 @@ export function createApp(dbPath?: string) {
         "loans:payoff",
       ].includes(t.category_key)
     );
-    const top = totals.filter((t) => t.sum < 0).slice(0, 14);
+    const medians = medianByKey(
+      q.categoryByMonth(db, p).map((c) => ({
+        key: c.category_key,
+        month: c.month,
+        sum: c.sum,
+      })),
+      monthsBetween(p.from, p.to),
+    );
+    const top = totals.filter((t) => t.sum < 0).slice(0, 14).map((t) => ({
+      ...t,
+      median: medians.get(t.category_key) ?? 0,
+    }));
     const unc = db
       .prepare(
         `SELECT COUNT(*) AS count, IFNULL(SUM(t.amount), 0) AS sum FROM transactions t JOIN accounts a ON a.id = t.account_id
@@ -256,6 +268,8 @@ export function createApp(dbPath?: string) {
     },
   ): q.TxFilters => {
     const one = (k: string) => c.req.query(k) || undefined;
+    // Checkboxes send "1"; the pager re-serializes booleans as "true".
+    const flag = (k: string) => ["1", "true"].includes(c.req.query(k) ?? "");
     const many = (k: string) => {
       const values = (c.req.queries(k) ?? []).filter(Boolean);
       return values.length ? values : undefined;
@@ -276,7 +290,8 @@ export function createApp(dbPath?: string) {
       direction: direction === "in" || direction === "out"
         ? direction
         : undefined,
-      uncategorized: c.req.query("uncategorized") === "1",
+      uncategorized: flag("uncategorized"),
+      oneoff: flag("oneoff"),
       merchant: one("merchant"),
       page: Math.max(1, Number(c.req.query("page") || 1)),
       pageSize: 200,
@@ -309,6 +324,16 @@ export function createApp(dbPath?: string) {
     const body = await c.req.parseBody();
     const category = String(body["category_key"] ?? "");
     q.setOverride(db, tx.fingerprint, category || null);
+    categorizeAll(db, config);
+    return c.html(<TxTableRow tx={q.getTransaction(db, id)!} />);
+  });
+
+  app.post("/transactions/:id/oneoff", async (c) => {
+    const id = Number(c.req.param("id"));
+    const tx = q.getTransaction(db, id);
+    if (!tx) return c.text("not found", 404);
+    const body = await c.req.parseBody();
+    q.setOneOff(db, tx.fingerprint, String(body["one_off"] ?? "") === "1");
     categorizeAll(db, config);
     return c.html(<TxTableRow tx={q.getTransaction(db, id)!} />);
   });

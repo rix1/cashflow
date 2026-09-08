@@ -79,6 +79,9 @@ function periodWhere(
  * inntekt" and unknown inflows stay out until they are linked as a
  * reimbursement or given a category; unknown outflows count as spending.
  * Both errors point the same way, so headroom is never overstated.
+ *
+ * Every aggregate in this file also leaves out rows flagged as one-offs
+ * (t.one_off = 0); the transaction list is the only place that shows them.
  */
 export const OPERATING_INCOME_CATEGORIES = [
   "income:salary",
@@ -107,7 +110,7 @@ export function monthlyFlows(db: Database, p: Period): MonthlyFlow[] {
       `SELECT substr(t.date, 1, 7) AS month, a.owner,
               SUM(${INCOME_EXPR}) AS income, SUM(${EXPENSE_EXPR}) AS expense, SUM(${SAVING_EXPR}) AS saving
        FROM transactions t JOIN accounts a ON a.id = t.account_id JOIN categories c ON c.key = t.category_key
-       WHERE ${w.sql} GROUP BY 1, 2 ORDER BY 1, 2`,
+       WHERE ${w.sql} AND t.one_off = 0 GROUP BY 1, 2 ORDER BY 1, 2`,
     )
     .all<MonthlyFlow>(w.params);
 }
@@ -125,7 +128,7 @@ export function categoryByMonth(db: Database, p: Period): CategoryMonth[] {
     .prepare(
       `SELECT t.category_key, substr(t.date, 1, 7) AS month, SUM(t.amount) AS sum, COUNT(*) AS count
        FROM transactions t JOIN accounts a ON a.id = t.account_id
-       WHERE ${w.sql} GROUP BY 1, 2`,
+       WHERE ${w.sql} AND t.one_off = 0 GROUP BY 1, 2`,
     )
     .all<CategoryMonth>(w.params);
 }
@@ -142,7 +145,7 @@ export function categoryTotals(db: Database, p: Period): CategoryTotal[] {
     .prepare(
       `SELECT t.category_key, SUM(t.amount) AS sum, COUNT(*) AS count
        FROM transactions t JOIN accounts a ON a.id = t.account_id
-       WHERE ${w.sql} GROUP BY 1 ORDER BY SUM(t.amount)`,
+       WHERE ${w.sql} AND t.one_off = 0 GROUP BY 1 ORDER BY SUM(t.amount)`,
     )
     .all<CategoryTotal>(w.params);
 }
@@ -164,6 +167,8 @@ export type TxFilters = {
   /** "in" = positive amounts, "out" = negative amounts. */
   direction?: TxDirection;
   uncategorized?: boolean;
+  /** Only rows flagged as one-offs. */
+  oneoff?: boolean;
   merchant?: string;
   page?: number;
   pageSize?: number;
@@ -254,6 +259,7 @@ export function listTransactions(
     params.to = f.to.length === 7 ? `${addMonths(f.to, 1)}-01` : f.to;
   }
   if (f.uncategorized) where.push(`t.category_key = 'uncategorized'`);
+  if (f.oneoff) where.push(`t.one_off = 1`);
   if (f.merchant) {
     where.push(`t.merchant = :merchant`);
     params.merchant = f.merchant;
@@ -323,6 +329,11 @@ export function linkReimbursement(
     }
   }
   upsertOverride(db, inflowFingerprint, { reimburses: expenseFingerprint });
+}
+
+/** Flags a transaction as a one-off (or not): kept in the list, out of every average. */
+export function setOneOff(db: Database, fingerprint: string, oneOff: boolean) {
+  upsertOverride(db, fingerprint, { one_off: oneOff });
 }
 
 export type ReviewGroup = {
@@ -429,7 +440,7 @@ function recurringItemsRaw(db: Database, owner?: string): RecurringItem[] {
     .prepare(
       `SELECT t.merchant, t.category_key, a.owner, t.date, t.amount
        FROM transactions t JOIN accounts a ON a.id = t.account_id JOIN categories c ON c.key = t.category_key
-       WHERE c.kind = 'expense' ${ownerSql}`,
+       WHERE c.kind = 'expense' AND t.one_off = 0 ${ownerSql}`,
     )
     .all<
       {
@@ -495,7 +506,7 @@ export function averages(db: Database, p: Period): Averages {
               SUM(CASE WHEN t.category_key = 'housing:mortgage' THEN t.amount ELSE 0 END) AS mortgage,
               SUM(${SAVING_EXPR}) AS saving
        FROM transactions t JOIN accounts a ON a.id = t.account_id JOIN categories c ON c.key = t.category_key
-       WHERE ${w.sql}`,
+       WHERE ${w.sql} AND t.one_off = 0`,
     )
     .get<
       {
@@ -523,19 +534,25 @@ export function averages(db: Database, p: Period): Averages {
 export type HeldOut = {
   /** "Annen inntekt": inflows not counted as operating income. */
   otherIncome: { count: number; sum: number };
+  /** Rows flagged as one-offs, left out of every aggregate. */
+  oneOff: { count: number; sum: number };
 };
 
 /** What the operating view leaves out in a period, so the page can say so. */
 export function heldOut(db: Database, p: Period): HeldOut {
   const w = periodWhere(p);
-  const otherIncome = db
-    .prepare(
-      `SELECT COUNT(*) AS count, IFNULL(SUM(t.amount), 0) AS sum
-       FROM transactions t JOIN accounts a ON a.id = t.account_id
-       WHERE ${w.sql} AND t.category_key = 'income:other'`,
-    )
-    .get<{ count: number; sum: number }>(w.params)!;
-  return { otherIncome };
+  const count = (condition: string) =>
+    db
+      .prepare(
+        `SELECT COUNT(*) AS count, IFNULL(SUM(t.amount), 0) AS sum
+         FROM transactions t JOIN accounts a ON a.id = t.account_id
+         WHERE ${w.sql} AND ${condition}`,
+      )
+      .get<{ count: number; sum: number }>(w.params)!;
+  return {
+    otherIncome: count(`t.category_key = 'income:other' AND t.one_off = 0`),
+    oneOff: count(`t.one_off = 1`),
+  };
 }
 
 function monthsCount(from: string, to: string): number {
@@ -824,7 +841,7 @@ export function vendorList(
     .prepare(
       `SELECT t.merchant, substr(t.date, 1, 7) AS month, t.category_key, a.owner, SUM(t.amount) AS sum, COUNT(*) AS count, MIN(t.date) AS first, MAX(t.date) AS last
        FROM transactions t JOIN accounts a ON a.id = t.account_id JOIN categories c ON c.key = t.category_key
-       WHERE ${w.sql} AND c.kind NOT IN ('transfer', 'saving') ${extra}
+       WHERE ${w.sql} AND t.one_off = 0 AND c.kind NOT IN ('transfer', 'saving') ${extra}
        GROUP BY 1, 2, 3, 4`,
     )
     .all<VendorCell>(params);
@@ -893,13 +910,14 @@ export function vendorDetail(
   const yearly = db
     .prepare(
       `SELECT substr(t.date, 1, 4) AS year, SUM(t.amount) AS sum, COUNT(*) AS count
-       FROM transactions t JOIN accounts a ON a.id = t.account_id WHERE ${w.sql}${ownerSql} AND t.merchant = :merchant GROUP BY 1 ORDER BY 1`,
+       FROM transactions t JOIN accounts a ON a.id = t.account_id
+       WHERE ${w.sql}${ownerSql} AND t.one_off = 0 AND t.merchant = :merchant GROUP BY 1 ORDER BY 1`,
     )
     .all<{ year: string; sum: number; count: number }>(params);
   const categories = db
     .prepare(
       `SELECT t.category_key, COUNT(*) AS count FROM transactions t JOIN accounts a ON a.id = t.account_id
-       WHERE ${w.sql}${ownerSql} AND t.merchant = :merchant GROUP BY 1 ORDER BY 2 DESC`,
+       WHERE ${w.sql}${ownerSql} AND t.one_off = 0 AND t.merchant = :merchant GROUP BY 1 ORDER BY 2 DESC`,
     )
     .all<{ category_key: string; count: number }>(params);
   return { ...row, yearly, categories };

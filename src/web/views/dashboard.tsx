@@ -8,7 +8,7 @@ import type {
   HeldOut,
   MonthlyFlow,
 } from "../queries.ts";
-import { ChartScript, Money, PeriodFilters } from "./layout.tsx";
+import { ChartScript, MEDIAN_HINT, Money, PeriodFilters } from "./layout.tsx";
 
 type Props = {
   from: string;
@@ -18,7 +18,7 @@ type Props = {
   flows: MonthlyFlow[];
   averages: Averages;
   heldOut: HeldOut;
-  topCategories: CategoryTotal[];
+  topCategories: (CategoryTotal & { median: number })[];
   gaps: Gap[];
   uncategorized: { count: number; sum: number };
 };
@@ -150,6 +150,10 @@ export const Dashboard: FC<Props> = (
         Holdt utenfor driften: annen inntekt{" "}
         <a href={`/transactions?category=income%3Aother&${periodQuery}`}>
           {heldOut.otherIncome.count} poster, {nok(heldOut.otherIncome.sum)}
+        </a>{" "}
+        · engangsposter{" "}
+        <a href={`/transactions?oneoff=1&${periodQuery}`}>
+          {heldOut.oneOff.count} poster, {nok(heldOut.oneOff.sum)}
         </a>. Sparing og overføringer mellom egne kontoer telles ikke som
         inntekt eller utgift.
       </p>
@@ -218,6 +222,7 @@ export const Dashboard: FC<Props> = (
                   <th>Kategori</th>
                   <th class="num">Totalt</th>
                   <th class="num">Per mnd</th>
+                  <th class="num" title={MEDIAN_HINT}>Typisk mnd</th>
                   <th class="num">Antall</th>
                 </tr>
               </thead>
@@ -239,6 +244,7 @@ export const Dashboard: FC<Props> = (
                     </td>
                     <td class="num">{nok(c.sum)}</td>
                     <td class="num">{nok(c.sum / averages.months)}</td>
+                    <td class="num" title={MEDIAN_HINT}>{nok(c.median)}</td>
                     <td class="num">{c.count}</td>
                   </tr>
                 ))}

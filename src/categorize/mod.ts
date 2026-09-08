@@ -100,6 +100,14 @@ export function loadContext(
   return { config, accountsByNumber, rules, overrides, salaryPayers };
 }
 
+/** Mirrors the one-off flag from overrides onto transactions so aggregates can filter without a join. */
+function applyOneOffs(db: Database) {
+  db.exec(
+    `UPDATE transactions
+     SET one_off = IFNULL((SELECT o.one_off FROM overrides o WHERE o.fingerprint = transactions.fingerprint), 0)`,
+  );
+}
+
 /**
  * An inflow linked to an expense takes that expense's category, whatever
  * rule or override decided it, so the two net out in the same place. Runs
@@ -149,6 +157,7 @@ export function categorizeAll(db: Database, config: Config): CategorizeStats {
     }
   })();
   update.finalize();
+  applyOneOffs(db);
   applyReimbursements(db);
   const transfersLinked = linkTransfers(db);
 

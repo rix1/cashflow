@@ -5,6 +5,9 @@ import { categoryOptions } from "../queries.ts";
 
 export type Assets = { htmx: string; chart: string };
 
+export const MEDIAN_HINT =
+  "Typisk måned: median av månedssummene i perioden. Måneder uten kjøp teller som 0, så et enkelt stort kjøp drar ikke tallet opp slik snittet gjør.";
+
 const NAV: [string, string][] = [
   ["/", "Oversikt"],
   ["/categories", "Kategorier"],
@@ -45,7 +48,8 @@ details.multi summary::-webkit-details-marker { display:none } details.multi sum
 .multi-menu label:hover { background:var(--soft) } .multi-menu input { margin:0 }
 input, select, button { font:inherit; padding:5px 8px; border:1px solid var(--line); border-radius:6px; background:#fff } input[type=month] { min-width:130px }
 button, .btn { cursor:pointer; background:var(--accent); color:#fff; border-color:var(--accent) } button.secondary { background:#fff; color:var(--fg); border-color:var(--line) } button.danger { background:#fff; color:var(--neg); border-color:var(--line) }
-.badge { display:inline-block; font-size:11px; padding:1px 6px; border-radius:10px; background:var(--soft); color:var(--muted) } .badge.manual { background:#e8f0fb; color:var(--accent) } .badge.transfer { background:#eef7f0; color:var(--pos) } .badge.none { background:#fbeeea; color:var(--neg) }
+.badge { display:inline-block; font-size:11px; padding:1px 6px; border-radius:10px; background:var(--soft); color:var(--muted) } .badge.manual { background:#e8f0fb; color:var(--accent) } .badge.transfer { background:#eef7f0; color:var(--pos) } .badge.none { background:#fbeeea; color:var(--neg) } .badge.oneoff { background:#f6efe0; color:var(--warn) }
+tr.oneoff td { color:var(--muted) } button.small { padding:1px 6px; font-size:11px }
 .chart { position:relative; height:280px; margin:8px 0 } canvas { max-width:100% }
 details summary { cursor:pointer; color:var(--muted) } .desc { max-width:360px } pre { white-space:pre-wrap; font-size:12px; background:var(--soft); padding:6px 8px; border-radius:6px; margin:6px 0 0 }
 .inline-form { display:inline-flex; gap:6px; align-items:center } .callout { border-left:3px solid var(--warn); background:#fff8ec; padding:8px 12px; border-radius:6px; margin:10px 0 }

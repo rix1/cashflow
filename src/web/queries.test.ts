@@ -3,12 +3,16 @@ import { categorizeAll } from "../categorize/mod.ts";
 import { TEST_CONFIG, testDatabase } from "../db/testdb.ts";
 import {
   averages,
+  categoryTotals,
   getTransaction,
   heldOut,
   linkReimbursement,
+  listTransactions,
   monthlyFlows,
   reimbursementCandidates,
+  setOneOff,
   upsertOverride,
+  vendorList,
 } from "./queries.ts";
 
 Deno.test("a linked inflow takes the reimbursed expense's category and follows it", () => {
@@ -94,4 +98,46 @@ Deno.test("operating income counts salary, not one-off inflows or unknown money 
     -1700,
   ]]);
   assertEquals(heldOut(db, p).otherIncome, { count: 1, sum: 10000 });
+});
+
+Deno.test("a one-off stays in the list but out of every average", () => {
+  const db = testDatabase([
+    {
+      merchant: "EMPLOYER",
+      date: "2026-01-10",
+      amount: 50000,
+      bank_type: "Lønn",
+    },
+    { merchant: "REMA 1000", date: "2026-01-15", amount: -1000 },
+    { merchant: "REMA 1000", date: "2026-01-20", amount: -9000 },
+  ]);
+  categorizeAll(db, TEST_CONFIG);
+  const p = { from: "2026-01", to: "2026-01" };
+  assertEquals(averages(db, p).expense, -10000);
+
+  setOneOff(db, "fp2", true);
+  categorizeAll(db, TEST_CONFIG);
+  assertEquals(getTransaction(db, 3)!.one_off, 1);
+  assertEquals(averages(db, p).expense, -1000);
+  assertEquals(
+    categoryTotals(db, p).find((c) => c.category_key === "groceries")?.sum,
+    -1000,
+  );
+  assertEquals(
+    vendorList(db, p).rows.find((r) => r.merchant === "REMA 1000")?.sum,
+    -1000,
+  );
+  assertEquals(heldOut(db, p).oneOff, { count: 1, sum: -9000 });
+  assertEquals(listTransactions(db, { oneoff: true }).rows.map((r) => r.id), [
+    3,
+  ]);
+  assertEquals(listTransactions(db, {}).total, 3);
+
+  setOneOff(db, "fp2", false);
+  categorizeAll(db, TEST_CONFIG);
+  assertEquals(averages(db, p).expense, -10000);
+  assertEquals(
+    db.prepare(`SELECT COUNT(*) AS n FROM overrides`).get<{ n: number }>()!.n,
+    0,
+  );
 });

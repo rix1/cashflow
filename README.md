@@ -102,8 +102,12 @@ into stable merchant keys so rules stay short.
 and employer refunds as income. "Annen inntekt" and unknown inflows stay out
 until they are linked as a reimbursement or given a category, unknown
 outflows count as spending, and moves to and from savings are neither. Both
-errors understate headroom rather than inflate it. The overview says what
-was held out.
+errors understate headroom rather than inflate it. A transaction flagged as a
+one-off in the UI stays in the transaction list but leaves every average,
+category total, merchant total and the recurring detector. The overview says
+what was held out, and shows a "typical month" (the median of the monthly
+sums, empty months counting as zero) next to the mean per category, so one
+big purchase does not define a category.
 
 **Web UI** (`src/web/`) is Hono with server-rendered JSX and htmx, no build
 step. Chart.js and htmx load from cdnjs unless copies exist in

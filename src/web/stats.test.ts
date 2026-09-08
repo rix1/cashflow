@@ -2,6 +2,8 @@ import { assertAlmostEquals, assertEquals } from "@std/assert";
 import {
   activeSpan,
   linearTrend,
+  median,
+  medianByKey,
   monthEnd,
   periodAverages,
   sparklinePoints,
@@ -64,4 +66,27 @@ Deno.test("sparklinePoints scales magnitudes into the box", () => {
   const pts = sparklinePoints([-10, -20], 100, 20, 0).split(" ");
   assertEquals(pts, ["0.0,10.0", "100.0,0.0"]);
   assertEquals(sparklinePoints([]), "");
+});
+
+Deno.test("median: odd, even and empty", () => {
+  assertEquals(median([5, 1, 3]), 3);
+  assertEquals(median([4, 1, 3, 2]), 2.5);
+  assertEquals(median([]), 0);
+});
+
+Deno.test("medianByKey counts months without rows as zero", () => {
+  const months = ["2026-01", "2026-02", "2026-03", "2026-04"];
+  const cells = [
+    { key: "travel", month: "2026-01", sum: -18000 },
+    { key: "groceries", month: "2026-01", sum: -6000 },
+    { key: "groceries", month: "2026-02", sum: -5000 },
+    { key: "groceries", month: "2026-03", sum: -7000 },
+    { key: "groceries", month: "2026-04", sum: -6500 },
+    { key: "groceries", month: "2026-04", sum: -500 },
+  ];
+  const m = medianByKey(cells, months);
+  // One big trip in four months: the typical month is nothing.
+  assertEquals(m.get("travel"), 0);
+  // Two cells in April add up before the median is taken.
+  assertEquals(m.get("groceries"), -6500);
 });

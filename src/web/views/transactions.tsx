@@ -108,6 +108,39 @@ const Reimbursement: FC<{ tx: TxRow }> = ({ tx }) => {
   );
 };
 
+/** Flag or unflag a row as a one-off; flagged rows stay listed but leave every average. */
+const OneOffToggle: FC<{ tx: TxRow }> = ({ tx }) =>
+  tx.one_off
+    ? (
+      <>
+        <span class="badge oneoff" title="Holdes utenfor snitt og totaler">
+          engangs
+        </span>
+        <button
+          type="button"
+          class="secondary small"
+          hx-post={`/transactions/${tx.id}/oneoff`}
+          hx-vals='{"one_off": "0"}'
+          {...swapRow(tx)}
+          title="Ta med i snitt og totaler igjen"
+        >
+          ×
+        </button>
+      </>
+    )
+    : (
+      <button
+        type="button"
+        class="secondary small"
+        hx-post={`/transactions/${tx.id}/oneoff`}
+        hx-vals='{"one_off": "1"}'
+        {...swapRow(tx)}
+        title="Engangspost: hold utenfor snitt og totaler"
+      >
+        engangs
+      </button>
+    );
+
 export const TxTableHead: FC = () => (
   <thead>
     <tr>
@@ -121,7 +154,7 @@ export const TxTableHead: FC = () => (
 );
 
 export const TxTableRow: FC<{ tx: TxRow }> = ({ tx }) => (
-  <tr id={`tx-${tx.id}`}>
+  <tr id={`tx-${tx.id}`} class={tx.one_off ? "oneoff" : ""}>
     <td class="nowrap">{tx.date}</td>
     <td class="nowrap small">
       {tx.owner} · {tx.bank}
@@ -172,6 +205,7 @@ export const TxTableRow: FC<{ tx: TxRow }> = ({ tx }) => (
             ×
           </button>
         )}
+        <OneOffToggle tx={tx} />
       </form>
       <Reimbursement tx={tx} />
     </td>
@@ -290,6 +324,18 @@ export const TransactionsPage: FC<Props> = (
               checked={!!filters.uncategorized}
             />{" "}
             kun ukategoriserte
+          </span>
+        </label>
+        <label>
+          <span>&nbsp;</span>
+          <span>
+            <input
+              type="checkbox"
+              name="oneoff"
+              value="1"
+              checked={!!filters.oneoff}
+            />{" "}
+            kun engangs
           </span>
         </label>
         {filters.merchant && (
