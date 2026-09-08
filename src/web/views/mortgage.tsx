@@ -204,7 +204,7 @@ export const MortgagePage: FC<Props> = (
                   {s.rate.toLocaleString("nb-NO", { maximumFractionDigits: 2 })}
                   {" "}
                   %{s.rate === whatIf.rate && (
-                    <span class="small">· valgt rente</span>
+                    <span class="small">&nbsp;· valgt rente</span>
                   )}
                 </td>
                 <td class="num">{nok(s.payment)}</td>

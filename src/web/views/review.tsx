@@ -33,7 +33,7 @@ export const ReviewPage: FC<Props> = (
       <button type="submit">Vis</button>
     </form>
     <div class="tablewrap">
-      <table>
+      <table class="review-table">
         <thead>
           <tr>
             <th>Mottaker</th>
@@ -46,6 +46,15 @@ export const ReviewPage: FC<Props> = (
           </tr>
         </thead>
         <tbody>
+          {groups.length === 0 && (
+            <tr>
+              <td colspan={7} class="empty-state">
+                <strong>Ingen ukategoriserte mottakere i utvalget</strong>Du kan
+                fortsatt justere enkeltposter under{" "}
+                <a href="/transactions">Transaksjoner</a>.
+              </td>
+            </tr>
+          )}
           {groups.map((g) => (
             <tr>
               <td>
@@ -66,7 +75,11 @@ export const ReviewPage: FC<Props> = (
                 <form method="post" action="/review/rule" class="inline-form">
                   <input type="hidden" name="merchant" value={g.merchant} />
                   <input type="hidden" name="owner" value={owner ?? ""} />
-                  <CategorySelect name="category_key" value="uncategorized" />
+                  <CategorySelect
+                    name="category_key"
+                    value="uncategorized"
+                    attrs={{ "aria-label": `Kategori for ${g.merchant}` }}
+                  />
                   <button type="submit">Lagre regel</button>
                 </form>
               </td>
@@ -88,7 +101,16 @@ export const ReviewPage: FC<Props> = (
     <div class="tablewrap">
       <table>
         <TxTableHead />
-        <tbody>{otherIncome.map((tx) => <TxTableRow tx={tx} />)}</tbody>
+        <tbody>
+          {otherIncome.length === 0 && (
+            <tr>
+              <td colspan={5} class="empty-state">
+                Ingen annen inntekt å avklare i utvalget.
+              </td>
+            </tr>
+          )}
+          {otherIncome.map((tx) => <TxTableRow tx={tx} />)}
+        </tbody>
       </table>
     </div>
   </>

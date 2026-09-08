@@ -153,6 +153,14 @@ export const VendorsPage: FC<ListProps> = (
             </tr>
           </thead>
           <tbody>
+            {rows.length === 0 && (
+              <tr>
+                <td colspan={11} class="empty-state">
+                  <strong>Ingen mottakere i utvalget</strong>Prøv en annen
+                  periode eller <a href="/vendors">nullstill filtrene</a>.
+                </td>
+              </tr>
+            )}
             {rows.map((r) => {
               const avg = periodAverages(r.sum, fromDate, toDate);
               return (
@@ -373,13 +381,13 @@ export const VendorPage: FC<DetailProps> = (
                         <a
                           href={`/transactions?merchant=${
                             encodeURIComponent(vendor.merchant)
-                          }&month=${m}${ownerQuery}`}
+                          }&from=${m}&to=${m}${ownerQuery}`}
                         >
                           {monthLabel(m)}
                         </a>
                       </td>
                       <td class="num">
-                        {v ? nok(v) : <span class="muted">·</span>}
+                        {nok(v)}
                       </td>
                     </tr>
                   );

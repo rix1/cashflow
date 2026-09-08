@@ -271,10 +271,11 @@ export const MultiSelect: FC<
   {
     name: string;
     groups: MultiGroup[];
+    label: string;
     selected?: string[];
     emptyLabel?: string;
   }
-> = ({ name, groups, selected = [], emptyLabel = "alle" }) => {
+> = ({ name, groups, label, selected = [], emptyLabel = "alle" }) => {
   const chosen = groups
     .flatMap((g) => g.options)
     .filter((o) => selected.includes(o.value));
@@ -284,8 +285,13 @@ export const MultiSelect: FC<
     ? chosen.map((o) => o.label).join(", ")
     : `${chosen.length} valgt`;
   return (
-    <details class="multi" data-empty={emptyLabel}>
-      <summary title={chosen.map((o) => o.label).join(", ")}>{summary}</summary>
+    <details class="multi" data-empty={emptyLabel} data-label={label}>
+      <summary
+        aria-label={`${label}: ${summary}`}
+        title={chosen.map((o) => o.label).join(", ")}
+      >
+        {summary}
+      </summary>
       <div class="multi-menu">
         {groups.map((g) => (
           <>
@@ -309,11 +315,73 @@ export const MultiSelect: FC<
 };
 
 const MULTI_SCRIPT = `(function(){
-function label(d){var c=d.querySelectorAll('input:checked');if(!c.length)return d.dataset.empty||'alle';
-if(c.length<=2)return Array.prototype.map.call(c,function(i){return i.parentElement.textContent.trim()}).join(', ');
-return c.length+' valgt'}
-document.addEventListener('change',function(e){var d=e.target.closest&&e.target.closest('details.multi');if(d)d.querySelector('summary').textContent=label(d)});
-document.addEventListener('click',function(e){document.querySelectorAll('details.multi[open]').forEach(function(d){if(!d.contains(e.target))d.removeAttribute('open')})});
+function update(d) {
+  const chosen = Array.from(d.querySelectorAll('input:checked'), i => i.parentElement.textContent.trim());
+  const label = !chosen.length ? d.dataset.empty : chosen.length <= 2 ? chosen.join(', ') : chosen.length + ' valgt';
+  const summary = d.querySelector('summary');
+  summary.textContent = label;
+  summary.title = chosen.join(', ');
+  summary.setAttribute('aria-label', d.dataset.label + ': ' + label);
+}
+function position(d) {
+  const menu = d.querySelector('.multi-menu');
+  menu.style.left = '0px';
+  const right = menu.getBoundingClientRect().right;
+  menu.style.left = Math.min(0, innerWidth - 16 - right) + 'px';
+}
+document.addEventListener('change', e => {
+  const d = e.target.closest('details.multi');
+  if (d) update(d);
+});
+document.addEventListener('toggle', e => {
+  if (e.target.matches('details.multi[open]')) position(e.target);
+}, true);
+window.addEventListener('resize', () => document.querySelectorAll('details.multi[open]').forEach(position));
+for (const event of ['click', 'focusin']) document.addEventListener(event, e => {
+  document.querySelectorAll('details.multi[open]').forEach(d => {
+    if (!d.contains(e.target)) d.open = false;
+  });
+});
+document.addEventListener('keydown', e => {
+  const d = e.target.closest('details.multi[open]');
+  if (e.key === 'Escape' && d) {
+    d.open = false;
+    d.querySelector('summary').focus();
+    e.preventDefault();
+  }
+});
+const pending = new WeakMap();
+const status = document.getElementById('save-status');
+let timer;
+function announce(message, clear = false) {
+  clearTimeout(timer);
+  status.textContent = message;
+  if (clear) timer = setTimeout(() => status.textContent = '', 4500);
+}
+document.addEventListener('htmx:beforeRequest', e => {
+  const row = e.detail.elt.closest('tr[id^="tx-"]');
+  if (!row) return;
+  const focus = document.activeElement;
+  pending.set(e.detail.xhr, { row: row.id, focus: row.contains(focus) ? focus : null });
+  announce('Lagrer endringen …');
+});
+document.addEventListener('htmx:afterSwap', e => {
+  const state = pending.get(e.detail.xhr);
+  if (!state || !state.focus || state.focus.isConnected) return;
+  const row = document.getElementById(state.row);
+  const next = document.getElementById(state.focus.id) || row?.querySelector('select');
+  if (document.activeElement === document.body) next?.focus({ preventScroll: true });
+});
+document.addEventListener('htmx:afterRequest', e => {
+  const state = pending.get(e.detail.xhr);
+  if (!state) return;
+  if (e.detail.successful) announce('Endringen er lagret.', true);
+  else {
+    const select = document.getElementById(state.row)?.querySelector('select[data-saved-value]');
+    if (select) select.value = select.dataset.savedValue;
+    announce('Endringen ble ikke lagret. Prøv igjen.');
+  }
+});
 })();`;
 
 export const PeriodFilters: FC<
